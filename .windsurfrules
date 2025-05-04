@@ -42,8 +42,8 @@
 
 ### 📚 Documentation & Explainability
 - **Update `README.md`** when new features are added, dependencies change, or setup steps are modified.
-- **Comment non-obvious code** and ensure everything is understandable to a mid-level developer.
-- When writing complex logic, **add an inline `# Reason:` comment** explaining the why, not just the what.
+- **Comment non-obvious code in Russian** and ensure everything is understandable to a mid-level developer.
+- When writing complex logic, **add an inline `# Reason:` comment in Russian** explaining the why, not just the what.
 
 ### 🧠 AI Behavior Rules
 - **Never assume missing context. Ask questions if uncertain.**
@@ -56,3 +56,4 @@
   - `database.mdc` - Database best practices for Prisma and Supabase
   - `clean-code.mdc` - General clean code principles and guidelines
   - Any other rule files that may be added in the future
+  - **All chat responses should be in Russian** when communicating with users.
