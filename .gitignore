@@ -1,0 +1,41 @@
+# Виртуальные окружения
+venv/
+env/
+.env
+.venv/
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Логи
+logs/
+*.log
+
+# База данных
+data/*.db
+*.db
+*.db-journal
+
+# Кэш и временные файлы
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.nox/
+.hypothesis/
+.DS_Store
+
+# Конфигурационные файлы окружения (но сохраняем .env.example)
+.env
+
+# Poetry и зависимости
+.poetry-cache/
+poetry.lock
+.pdm.toml
+
+# IDE и редакторы
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
