@@ -22,7 +22,7 @@
 
 1.4. **Структура проекта**
 - [x] Спроектировать файловую структуру:
-  - `bot/` — модули бота (handlers, services, utils).
+  - `src/bot/` — модули бота (handlers, services, utils).
   - `data/` — файл базы данных `users.db`.
   - `tests/` — тесты.
   - `logs/` — файлы логов.
