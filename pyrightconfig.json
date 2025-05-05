@@ -1,0 +1,12 @@
+{
+  "include": ["src"],
+  "exclude": ["**/node_modules", "**/__pycache__", "**/.pytest_cache"],
+  "pythonVersion": "3.10",
+  "typeCheckingMode": "strict",
+  "useLibraryCodeForTypes": true,
+  "reportMissingTypeStubs": "warning",
+  "reportUnknownMemberType": "warning",
+  "reportUnknownParameterType": "warning",
+  "reportUnknownVariableType": "warning",
+  "reportImplicitStringConcatenation": "error"
+}

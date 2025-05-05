@@ -23,6 +23,9 @@ isort = "^5.13.2"
 mypy = "^1.8.0"
 pytest-cov = "^4.1.0"
 ruff = "^0.1.13"
+pre-commit = "^4.2.0"
+pyright = "^1.1.400"
+flake8-bugbear = "^24.12.12"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
