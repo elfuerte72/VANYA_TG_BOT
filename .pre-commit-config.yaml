@@ -10,24 +10,13 @@ repos:
     -   id: debug-statements
     -   id: check-merge-conflict
 
--   repo: https://github.com/psf/black
-    rev: 23.12.1  # Используем версию, которая уже установлена в проекте
-    hooks:
-    -   id: black
-
--   repo: https://github.com/pycqa/isort
-    rev: 5.13.2  # Используем версию, которая уже установлена в проекте
-    hooks:
-    -   id: isort
-
 -   repo: https://github.com/charliermarsh/ruff-pre-commit
-    rev: v0.1.13  # Используем версию, которая уже установлена в проекте
+    rev: v0.1.13
     hooks:
     -   id: ruff
         args: [--fix, --exit-non-zero-on-fix]
 
--   repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.8.0  # Используем версию, которая уже установлена в проекте
+-   repo: https://github.com/RobertCraigie/pyright-python
+    rev: v1.1.400
     hooks:
-    -   id: mypy
-        exclude: ^tests/
+    -   id: pyright
