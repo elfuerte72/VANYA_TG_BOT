@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 """
-Скрипт для тестирования базы данных и схемы таблицы пользователей.
-Проверяет создание таблицы, добавление и получение данных.
+Script for testing database and user table schema.
+Tests table creation, data addition and retrieval.
 """
 import os
 import sys
@@ -9,31 +9,33 @@ import tempfile
 from datetime import datetime
 from pathlib import Path
 
+# Add project root to path first to ensure proper imports
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
+
+# Import SQLAlchemy components
 from sqlalchemy import create_engine, inspect
 from sqlalchemy.orm import sessionmaker
 
-# Добавляем корневую директорию проекта в sys.path
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
-
+# Import application components
 from src.core.models.user import Base, User
-from src.core.services.user_repository import UserRepository
+from src.core.services.user_repository import UserProfileUpdate, UserRepository
 
 
 def setup_test_db():
-    """Создать временную тестовую базу данных."""
+    """Create a temporary test database."""
     temp_dir = tempfile.gettempdir()
     db_path = os.path.join(temp_dir, "test_db.db")
 
-    # Удаляем базу, если она существует
+    # Remove database if it exists
     if os.path.exists(db_path):
         os.remove(db_path)
 
-    # Создаем подключение к базе
+    # Create database connection
     db_url = f"sqlite:///{db_path}"
     engine = create_engine(db_url)
     Base.metadata.create_all(engine)
 
-    # Создаем сессию
+    # Create session
     Session = sessionmaker(bind=engine)
     session = Session()
 
@@ -41,14 +43,14 @@ def setup_test_db():
 
 
 def test_schema(engine):
-    """Проверить схему таблицы пользователей."""
-    print("\n=== Проверка схемы таблицы ===")
+    """Test user table schema."""
+    print("\n=== Testing Table Schema ===")
 
     inspector = inspect(engine)
     tables = inspector.get_table_names()
 
-    assert "users" in tables, "Таблица 'users' не создана"
-    print("✓ Таблица 'users' успешно создана")
+    assert "users" in tables, "Table 'users' not created"
+    print("✓ Table 'users' successfully created")
 
     columns = inspector.get_columns("users")
     column_names = [col["name"] for col in columns]
@@ -66,113 +68,122 @@ def test_schema(engine):
     ]
 
     for expected_column in expected_columns:
-        assert (
-            expected_column in column_names
-        ), f"Колонка '{expected_column}' отсутствует"
-        print(f"✓ Колонка '{expected_column}' существует")
+        assert expected_column in column_names, f"Column '{expected_column}' missing"
+        print(f"✓ Column '{expected_column}' exists")
 
-    # Проверяем тип первичного ключа
+    # Check primary key type
     pk = inspector.get_pk_constraint("users")
-    assert pk["constrained_columns"] == ["id"], "Неверный первичный ключ"
-    print("✓ Первичный ключ верно установлен на колонке 'id'")
+    assert pk["constrained_columns"] == ["id"], "Invalid primary key"
+    print("✓ Primary key correctly set on column 'id'")
 
-    # Проверяем уникальность telegram_id
+    # Check telegram_id uniqueness
     unique_constraints = inspector.get_unique_constraints("users")
     for constraint in unique_constraints:
         if "telegram_id" in constraint["column_names"]:
-            print("✓ Ограничение уникальности на telegram_id существует")
+            print("✓ Unique constraint on telegram_id exists")
             break
     else:
-        print("⚠ Ограничение уникальности на telegram_id не обнаружено в метаданных")
-        print("  (Это может быть особенностью SQLite)")
+        print("⚠ Unique constraint on telegram_id not found in metadata")
+        print("  (This might be a SQLite specificity)")
 
 
 def test_crud_operations(session):
-    """Протестировать операции CRUD с пользователями."""
-    print("\n=== Тестирование операций с пользователями ===")
+    """Test CRUD operations with users."""
+    print("\n=== Testing User Operations ===")
 
-    # Создаем репозиторий
+    # Create repository
     repo = UserRepository(session)
 
-    # Тест 1: Создание пользователя
+    # Test 1: User creation
     telegram_id = 123456789
     user = repo.create_user(telegram_id)
-    print(f"✓ Пользователь создан с id={user.id}")
+    print(f"✓ User created with id={user.id}")
 
-    # Тест 2: Получение пользователя
+    # Test 2: User retrieval
     retrieved_user = repo.get_user_by_telegram_id(telegram_id)
-    assert retrieved_user is not None, "Не удалось получить пользователя"
-    assert retrieved_user.telegram_id == telegram_id, "Неверный telegram_id"
-    print(f"✓ Пользователь с telegram_id={telegram_id} успешно получен")
+    assert retrieved_user is not None, "Failed to retrieve user"
+    assert retrieved_user.telegram_id == telegram_id, "Wrong telegram_id"
+    print(f"✓ User with telegram_id={telegram_id} successfully retrieved")
 
-    # Тест 3: Обновление профиля пользователя
-    repo.update_user_profile(
-        user.id, gender="male", age=30, height=180, weight=80.5, activity_factor=1.55
+    # Test 3: User profile update
+    # Using the new DTO pattern
+    UPDATE_GENDER = "male"
+    UPDATE_AGE = 30
+    UPDATE_HEIGHT = 180
+    UPDATE_WEIGHT = 80.5
+    UPDATE_ACTIVITY = 1.55
+
+    profile_update = UserProfileUpdate(
+        gender=UPDATE_GENDER,
+        age=UPDATE_AGE,
+        height=UPDATE_HEIGHT,
+        weight=UPDATE_WEIGHT,
+        activity_factor=UPDATE_ACTIVITY,
     )
 
-    updated_user = repo.get_user_by_telegram_id(telegram_id)
-    assert updated_user.gender == "male", "Пол не обновлен"
-    assert updated_user.age == 30, "Возраст не обновлен"
-    assert updated_user.height == 180, "Рост не обновлен"
-    assert abs(updated_user.weight - 80.5) < 0.01, "Вес не обновлен"
-    assert (
-        abs(updated_user.activity_factor - 1.55) < 0.01
-    ), "Коэффициент активности не обновлен"
-    print("✓ Профиль пользователя успешно обновлен")
+    repo.update_user_profile(user.id, profile_update)
 
-    # Тест 4: Отметка о расчете для пользователя
+    updated_user = repo.get_user_by_telegram_id(telegram_id)
+    assert updated_user.gender == UPDATE_GENDER, "Gender not updated"
+    assert updated_user.age == UPDATE_AGE, "Age not updated"
+    assert updated_user.height == UPDATE_HEIGHT, "Height not updated"
+    assert abs(updated_user.weight - UPDATE_WEIGHT) < 0.01, "Weight not updated"
+    assert (
+        abs(updated_user.activity_factor - UPDATE_ACTIVITY) < 0.01
+    ), "Activity factor not updated"
+    print("✓ User profile successfully updated")
+
+    # Test 4: Mark user as calculated
     before_mark = datetime.now()
     marked_user = repo.mark_as_calculated(user.id)
-    assert marked_user.calculated is True, "Флаг calculated не установлен"
-    assert marked_user.calculated_at is not None, "Время расчета не установлено"
-    assert marked_user.calculated_at > before_mark, "Время расчета неверное"
-    print("✓ Пользователь успешно отмечен как рассчитанный")
+    assert marked_user.calculated is True, "Calculated flag not set"
+    assert marked_user.calculated_at is not None, "Calculation time not set"
+    assert marked_user.calculated_at > before_mark, "Calculation time incorrect"
+    print("✓ User successfully marked as calculated")
 
-    # Тест 5: Проверка получения всех пользователей
+    # Test 5: Get all users
     all_users = repo.get_all_users()
-    assert len(all_users) >= 1, "Список пользователей пуст"
-    print(f"✓ Получен список пользователей (всего: {len(all_users)})")
+    assert len(all_users) >= 1, "User list is empty"
+    print(f"✓ Retrieved user list (total: {len(all_users)})")
 
-    # Тест 6: Проверка уникальности telegram_id
+    # Test 6: Test telegram_id uniqueness
     try:
-        # Создаем второго пользователя с тем же telegram_id
+        # Create second user with same telegram_id
         user2 = User(telegram_id=telegram_id)
         session.add(user2)
         session.commit()
-        print("✗ Ошибка: удалось создать пользователя с дублирующимся telegram_id")
+        print("✗ Error: created user with duplicate telegram_id")
     except Exception:
-        print(
-            "✓ Ограничение уникальности работает: невозможно создать дубликат telegram_id"
-        )
+        print("✓ Uniqueness constraint works: cannot create duplicate telegram_id")
         session.rollback()
 
 
 def main():
-    """Запустить все тесты базы данных."""
-    print("Начинается тестирование базы данных...")
+    """Run all database tests."""
+    print("Starting database testing...")
     engine, session, db_path = setup_test_db()
 
     try:
-        print(f"\nСоздана тестовая база данных: {db_path}")
+        print(f"\nCreated test database: {db_path}")
 
-        # Запускаем тесты
+        # Run tests
         test_schema(engine)
         test_crud_operations(session)
 
-        print("\n✅ Все тесты успешно пройдены!")
+        print("\n✅ All tests passed!")
     except AssertionError as e:
-        print(f"\n❌ Тест не пройден: {e}")
+        print(f"\n❌ Test failed: {e}")
         return 1
     except Exception as e:
-        print(f"\n❌ Ошибка при тестировании: {e}")
+        print(f"\n❌ Testing error: {e}")
         return 1
     finally:
         session.close()
 
-        # Удаляем тестовую базу данных
+        # Remove test database
         if os.path.exists(db_path):
             os.remove(db_path)
-            print(f"\nТестовая база данных удалена: {db_path}")
+            print(f"\nTest database removed: {db_path}")
 
     return 0
 

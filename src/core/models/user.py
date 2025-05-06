@@ -2,6 +2,8 @@
 User model and related database schema.
 """
 
+from typing import Any
+
 from sqlalchemy import BigInteger, Boolean, Column, DateTime, Float, Integer, String
 from sqlalchemy.ext.declarative import declarative_base
 
@@ -15,15 +17,15 @@ class User(Base):
 
     __tablename__ = "users"
 
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    telegram_id = Column(BigInteger, unique=True, nullable=False)
-    calculated = Column(Boolean, default=False)
-    gender = Column(String)
-    age = Column(Integer)
-    height = Column(Integer)
-    weight = Column(Float)
-    activity_factor = Column(Float)
-    calculated_at = Column(DateTime)
+    id: Any = Column(Integer, primary_key=True, autoincrement=True)
+    telegram_id: Any = Column(BigInteger, unique=True, nullable=False)
+    calculated: Any = Column(Boolean, default=False)
+    gender: Any = Column(String)
+    age: Any = Column(Integer)
+    height: Any = Column(Integer)
+    weight: Any = Column(Float)
+    activity_factor: Any = Column(Float)
+    calculated_at: Any = Column(DateTime)
 
     def __repr__(self) -> str:
         return (

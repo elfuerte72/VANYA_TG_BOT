@@ -1,12 +1,24 @@
 """
 Repository for user database operations.
 """
+from dataclasses import dataclass
 from datetime import datetime
 from typing import List, Optional
 
 from sqlalchemy.orm import Session
 
 from src.core.models.user import User
+
+
+@dataclass
+class UserProfileUpdate:
+    """Data Transfer Object for user profile updates."""
+
+    gender: Optional[str] = None
+    age: Optional[int] = None
+    height: Optional[int] = None
+    weight: Optional[float] = None
+    activity_factor: Optional[float] = None
 
 
 class UserRepository:
@@ -62,6 +74,40 @@ class UserRepository:
     def update_user_profile(
         self,
         user_id: int,
+        update_data: UserProfileUpdate,
+    ) -> Optional[User]:
+        """
+        Update user profile information.
+
+        Args:
+            user_id: User ID.
+            update_data: Data to update in the user profile.
+
+        Returns:
+            Updated user if found, None otherwise.
+        """
+        user = self.session.query(User).filter(User.id == user_id).first()
+        if user is None:
+            return None
+
+        if update_data.gender is not None:
+            user.gender = update_data.gender
+        if update_data.age is not None:
+            user.age = update_data.age
+        if update_data.height is not None:
+            user.height = update_data.height
+        if update_data.weight is not None:
+            user.weight = update_data.weight
+        if update_data.activity_factor is not None:
+            user.activity_factor = update_data.activity_factor
+
+        self.session.commit()
+        return user
+
+    # Для обратной совместимости
+    def update_user_profile_legacy(
+        self,
+        user_id: int,
         gender: Optional[str] = None,
         age: Optional[int] = None,
         height: Optional[int] = None,
@@ -69,7 +115,7 @@ class UserRepository:
         activity_factor: Optional[float] = None,
     ) -> Optional[User]:
         """
-        Update user profile information.
+        Update user profile information (legacy method).
 
         Args:
             user_id: User ID.
@@ -82,23 +128,14 @@ class UserRepository:
         Returns:
             Updated user if found, None otherwise.
         """
-        user = self.session.query(User).filter(User.id == user_id).first()
-        if user is None:
-            return None
-
-        if gender is not None:
-            user.gender = gender
-        if age is not None:
-            user.age = age
-        if height is not None:
-            user.height = height
-        if weight is not None:
-            user.weight = weight
-        if activity_factor is not None:
-            user.activity_factor = activity_factor
-
-        self.session.commit()
-        return user
+        update_data = UserProfileUpdate(
+            gender=gender,
+            age=age,
+            height=height,
+            weight=weight,
+            activity_factor=activity_factor,
+        )
+        return self.update_user_profile(user_id, update_data)
 
     def mark_as_calculated(self, user_id: int) -> Optional[User]:
         """

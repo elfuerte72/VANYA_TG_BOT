@@ -11,7 +11,7 @@ from sqlalchemy import create_engine, inspect
 from sqlalchemy.orm import sessionmaker
 
 from src.core.models.user import Base, User
-from src.core.services.user_repository import UserRepository
+from src.core.services.user_repository import UserProfileUpdate, UserRepository
 
 
 @pytest.fixture
@@ -76,14 +76,14 @@ def test_update_user_profile(user_repository):
     telegram_id = 11112222
     user = user_repository.create_user(telegram_id)
 
-    updated_user = user_repository.update_user_profile(
-        user.id,
+    update_data = UserProfileUpdate(
         gender="male",
         age=30,
         height=180,
         weight=75.5,
         activity_factor=1.55,
     )
+    updated_user = user_repository.update_user_profile(user.id, update_data)
 
     assert updated_user is not None
     assert updated_user.gender == "male"
@@ -91,6 +91,29 @@ def test_update_user_profile(user_repository):
     assert updated_user.height == 180
     assert updated_user.weight == 75.5
     assert updated_user.activity_factor == 1.55
+    assert updated_user.calculated is False
+
+
+def test_update_user_profile_legacy(user_repository):
+    """Test updating a user's profile using legacy method."""
+    telegram_id = 22223333
+    user = user_repository.create_user(telegram_id)
+
+    updated_user = user_repository.update_user_profile_legacy(
+        user.id,
+        gender="female",
+        age=25,
+        height=165,
+        weight=55.0,
+        activity_factor=1.2,
+    )
+
+    assert updated_user is not None
+    assert updated_user.gender == "female"
+    assert updated_user.age == 25
+    assert updated_user.height == 165
+    assert updated_user.weight == 55.0
+    assert updated_user.activity_factor == 1.2
     assert updated_user.calculated is False
 
 
