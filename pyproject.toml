@@ -28,7 +28,7 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.ruff]
 line-length = 88
-target-version = ["py310"]
+target-version = "py310"
 select = [
     "E",    # pycodestyle errors
     "F",    # pyflakes

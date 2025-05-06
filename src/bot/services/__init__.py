@@ -3,7 +3,7 @@
 Модуль содержит различные сервисы, которые используются в боте.
 """
 
-from .openai_service import (
+from src.ai.openai_service import (
     OpenAIClient,
     OpenAIConnectionError,
     OpenAIRateLimitError,

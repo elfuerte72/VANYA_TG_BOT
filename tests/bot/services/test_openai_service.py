@@ -11,7 +11,7 @@ from openai.types.chat import ChatCompletion, ChatCompletionMessage
 from openai.types.chat.chat_completion import Choice
 from openai.types.completion_usage import CompletionUsage
 
-from src.bot.services.openai_service import (
+from src.ai.openai_service import (
     OpenAIClient,
     OpenAIConnectionError,
     OpenAIRateLimitError,

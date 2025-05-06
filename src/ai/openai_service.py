@@ -196,7 +196,7 @@ class OpenAIClient:
         """
         # Нормализуем сообщения в формат словаря
         normalized_messages = [
-            msg.dict() if isinstance(msg, Message) else msg for msg in messages
+            msg.model_dump() if isinstance(msg, Message) else msg for msg in messages
         ]
 
         # Проверяем кэш, если включено кэширование
