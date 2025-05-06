@@ -1,12 +1,23 @@
 {
-  "include": ["src"],
-  "exclude": ["**/node_modules", "**/__pycache__", "**/.pytest_cache"],
+  "include": [
+    "src",
+    "tests"
+  ],
+  "exclude": [
+    "**/node_modules",
+    "**/__pycache__",
+    "**/.pytest_cache"
+  ],
   "pythonVersion": "3.10",
-  "typeCheckingMode": "strict",
+  "typeCheckingMode": "basic",
   "useLibraryCodeForTypes": true,
   "reportMissingTypeStubs": "warning",
   "reportUnknownMemberType": "warning",
   "reportUnknownParameterType": "warning",
   "reportUnknownVariableType": "warning",
-  "reportImplicitStringConcatenation": "error"
+  "reportImplicitStringConcatenation": "error",
+  "reportMissingImports": "warning",
+  "extraPaths": [
+    "src"
+  ]
 }

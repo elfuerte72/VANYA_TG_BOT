@@ -2,23 +2,27 @@
 Сервис для расчета КБЖУ с использованием формулы Бенедикта.
 """
 from dataclasses import dataclass
+
 from src.config.settings import (
     ACTIVITY_MULTIPLIERS,
     CALORIES_THRESHOLD,
-    PROTEIN_PERCENTAGE,
+    CARB_PERCENTAGE,
     FAT_PERCENTAGE,
-    CARB_PERCENTAGE
+    PROTEIN_PERCENTAGE,
 )
+
 
 @dataclass
 class NutritionPlan:
     """Класс, представляющий результат расчета КБЖУ."""
+
     daily_calories: int
     proteins_g: int
     fats_g: int
     carbs_g: int
     meals_count: int
     meals_breakdown: list[dict]
+
 
 def calculate_bmr(gender: str, weight: float, height: float, age: int) -> float:
     """
@@ -42,12 +46,9 @@ def calculate_bmr(gender: str, weight: float, height: float, age: int) -> float:
 
     return bmr
 
+
 def calculate_nutrition_plan(
-    gender: str,
-    age: int,
-    height: float,
-    weight: float,
-    activity_level: str = "medium"
+    gender: str, age: int, height: float, weight: float, activity_level: str = "medium"
 ) -> NutritionPlan:
     """
     Рассчитывает план питания с КБЖУ на основе данных пользователя.
@@ -75,12 +76,18 @@ def calculate_nutrition_plan(
     meals_count = 4 if daily_calories >= CALORIES_THRESHOLD else 3
 
     # Рассчитываем граммы макронутриентов
-    proteins_g = round((daily_calories * (PROTEIN_PERCENTAGE / 100)) / 4)  # 4 ккал/г белка
-    fats_g = round((daily_calories * (FAT_PERCENTAGE / 100)) / 9)          # 9 ккал/г жира
-    carbs_g = round((daily_calories * (CARB_PERCENTAGE / 100)) / 4)        # 4 ккал/г углеводов
+    proteins_g = round(
+        (daily_calories * (PROTEIN_PERCENTAGE / 100)) / 4
+    )  # 4 ккал/г белка
+    fats_g = round((daily_calories * (FAT_PERCENTAGE / 100)) / 9)  # 9 ккал/г жира
+    carbs_g = round(
+        (daily_calories * (CARB_PERCENTAGE / 100)) / 4
+    )  # 4 ккал/г углеводов
 
     # Распределение по приемам пищи
-    meals_breakdown = distribute_meals(daily_calories, proteins_g, fats_g, carbs_g, meals_count)
+    meals_breakdown = distribute_meals(
+        daily_calories, proteins_g, fats_g, carbs_g, meals_count
+    )
 
     return NutritionPlan(
         daily_calories=daily_calories,
@@ -88,10 +95,13 @@ def calculate_nutrition_plan(
         fats_g=fats_g,
         carbs_g=carbs_g,
         meals_count=meals_count,
-        meals_breakdown=meals_breakdown
+        meals_breakdown=meals_breakdown,
     )
 
-def distribute_meals(daily_calories: int, proteins_g: int, fats_g: int, carbs_g: int, meals_count: int) -> list[dict]:
+
+def distribute_meals(
+    daily_calories: int, proteins_g: int, fats_g: int, carbs_g: int, meals_count: int
+) -> list[dict]:
     """
     Распределяет КБЖУ по приемам пищи.
 
@@ -118,13 +128,13 @@ def distribute_meals(daily_calories: int, proteins_g: int, fats_g: int, carbs_g:
         distribution = [0.25, 0.35, 0.15, 0.25]
         meal_names = ["Завтрак", "Обед", "Полдник", "Ужин"]
 
-    for i, (name, ratio) in enumerate(zip(meal_names, distribution)):
+    for _, (name, ratio) in enumerate(zip(meal_names, distribution, strict=False)):
         meal = {
             "name": name,
             "calories": round(daily_calories * ratio),
             "proteins": round(proteins_g * ratio),
             "fats": round(fats_g * ratio),
-            "carbs": round(carbs_g * ratio)
+            "carbs": round(carbs_g * ratio),
         }
         meals.append(meal)
 

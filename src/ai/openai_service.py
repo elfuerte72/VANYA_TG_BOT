@@ -11,7 +11,6 @@ from typing import Any, Dict, List, Optional, Union
 
 import openai
 from loguru import logger
-from openai.types.chat import ChatCompletion
 from pydantic import BaseModel, Field, SecretStr
 
 # Константы
@@ -218,13 +217,6 @@ class OpenAIClient:
         }
 
         # Попытка выполнить запрос с повторными попытками
-        # Вспомогательная функция для извлечения значения из объекта или словаря
-        def _get_value(obj: Any, key: str, default: Any = None) -> Any:
-            """Получает значение из объекта или словаря"""
-            if isinstance(obj, dict):
-                return obj.get(key, default)
-            return getattr(obj, key, default)
-
         for attempt in range(MAX_RETRIES):
             try:
                 response = self.client.chat.completions.create(
@@ -234,45 +226,7 @@ class OpenAIClient:
                 if use_cache:
                     self._save_to_cache(cache_key, response)
                 # Возвращаем результат в виде словаря
-
-                # Если response уже словарь, возвращаем его как есть
-                if isinstance(response, dict):
-                    return response
-
-                # Формируем словарь для объектного ответа
-                result = {
-                    "id": _get_value(response, "id"),
-                    "created": _get_value(response, "created"),
-                    "model": _get_value(response, "model"),
-                    "choices": [],
-                }
-
-                # Обрабатываем варианты ответов
-                choices = _get_value(response, "choices", [])
-                for choice in choices:
-                    choice_result = {
-                        "finish_reason": _get_value(choice, "finish_reason"),
-                        "message": {},
-                    }
-
-                    # Обрабатываем сообщение
-                    message = _get_value(choice, "message", {})
-                    choice_result["message"] = {
-                        "role": _get_value(message, "role"),
-                        "content": _get_value(message, "content"),
-                    }
-
-                    result["choices"].append(choice_result)
-
-                # Обрабатываем информацию о использовании токенов
-                usage = _get_value(response, "usage", {})
-                result["usage"] = {
-                    "prompt_tokens": _get_value(usage, "prompt_tokens", 0),
-                    "completion_tokens": _get_value(usage, "completion_tokens", 0),
-                    "total_tokens": _get_value(usage, "total_tokens", 0),
-                }
-
-                return result
+                return response
             except openai.APIConnectionError as e:
                 logger.error(f"Ошибка соединения с OpenAI API: {e}")
                 # Если это последняя попытка, возбуждаем исключение
@@ -296,6 +250,23 @@ class OpenAIClient:
             retry_delay = BASE_RETRY_DELAY * (2**attempt)
             logger.info(f"Повторная попытка через {retry_delay} секунд...")
             time.sleep(retry_delay)
+
+        # Возвращаем пустой ответ в случае, если все попытки не удались
+        return {
+            "id": "error",
+            "created": int(time.time()),
+            "model": self.config.model,
+            "choices": [
+                {
+                    "message": {
+                        "role": "assistant",
+                        "content": "Произошла ошибка при обработке запроса.",
+                    },
+                    "finish_reason": "error",
+                }
+            ],
+            "usage": {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0},
+        }
 
     def get_completion(
         self,
