@@ -1,5 +1,7 @@
 from typing import Dict, List, Tuple
 
+from src.ai import generate_meal_examples
+
 
 def format_kbju_result(calculation: Dict) -> str:
     """
@@ -17,6 +19,7 @@ def format_kbju_result(calculation: Dict) -> str:
     carbs = calculation["carbs"]
     meal_count = calculation["meal_count"]
 
+    # Базовое сообщение с КБЖУ
     message = (
         f"<b>🔢 Ваш расчет КБЖУ:</b>\n\n"
         f"<b>📊 Суточная норма калорий:</b> {calories} ккал\n\n"
@@ -25,6 +28,48 @@ def format_kbju_result(calculation: Dict) -> str:
         f"<b>🍞 Углеводы:</b> {carbs} г\n\n"
         f"<b>🍽️ Рекомендуемое количество приемов пищи:</b> {meal_count}\n\n"
     )
+
+    # Добавляем план приемов пищи с использованием OpenAI
+    try:
+        kbju_data = {
+            "calories": calories,
+            "protein": protein,
+            "fat": fat,
+            "carbs": carbs,
+        }
+
+        # Генерация плана питания с примерами блюд
+        meal_plan = generate_meal_examples(kbju_data)
+
+        # Добавляем разделитель
+        message += "<b>📝 Примерное распределение по приемам пищи:</b>\n\n"
+
+        # Добавляем информацию о каждом приеме пищи
+        for meal in meal_plan:
+            meal_name = meal["meal"]
+            meal_calories = meal["calories"]
+            meal_protein = meal["protein"]
+            meal_fat = meal["fat"]
+            meal_carbs = meal["carbs"]
+            meal_examples = meal.get("examples", "")
+
+            message += (
+                f"<b>{meal_name}</b>\n"
+                f"🔸 Калории: {meal_calories} ккал\n"
+                f"🔸 Белки: {meal_protein} г\n"
+                f"🔸 Жиры: {meal_fat} г\n"
+                f"🔸 Углеводы: {meal_carbs} г\n"
+            )
+
+            # Добавляем примеры блюд, если они есть
+            if meal_examples:
+                message += f"<b>🍲 Примеры блюд:</b> {meal_examples}\n"
+
+            message += "\n"
+
+    except Exception:
+        # В случае ошибки просто пропускаем добавление плана питания
+        pass
 
     return message
 

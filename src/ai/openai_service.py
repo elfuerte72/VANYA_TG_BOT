@@ -7,16 +7,24 @@
 import json
 import time
 from functools import lru_cache
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Sequence, Union
 
 import openai
 from loguru import logger
+from openai.types.chat import ChatCompletion, ChatCompletionMessageParam
 from pydantic import BaseModel, Field, SecretStr
 
 # Константы
-DEFAULT_MODEL = "gpt-4-1106-nano"  # Модель ChatGPT 4.1 nano
+DEFAULT_MODEL = "gpt-4.1-nano"  # Модель ChatGPT 4.1 nano
 MAX_RETRIES = 3  # Максимальное количество повторных попыток при ошибке
 BASE_RETRY_DELAY = 1  # Начальная задержка перед повторной попыткой (в секундах)
+
+# Значения по умолчанию для конфигурации
+DEFAULT_TEMPERATURE = 0.3
+DEFAULT_MAX_TOKENS = 1000
+DEFAULT_TOP_P = 1.0
+DEFAULT_FREQUENCY_PENALTY = 0.0
+DEFAULT_PRESENCE_PENALTY = 0.0
 
 
 class OpenAIException(Exception):
@@ -57,13 +65,19 @@ class OpenAIConfig(BaseModel):
 
     api_key: SecretStr = Field(..., description="API ключ для OpenAI")
     model: str = Field(DEFAULT_MODEL, description="Модель OpenAI для использования")
-    temperature: float = Field(0.7, description="Температура генерации (0.0-1.0)")
-    max_tokens: int = Field(
-        1000, description="Максимальное количество токенов в ответе"
+    temperature: float = Field(
+        DEFAULT_TEMPERATURE, description="Температура генерации (0.0-1.0)"
     )
-    top_p: float = Field(1.0, description="Top-p для семплирования")
-    frequency_penalty: float = Field(0.0, description="Штраф за повторение частоты")
-    presence_penalty: float = Field(0.0, description="Штраф за присутствие")
+    max_tokens: int = Field(
+        DEFAULT_MAX_TOKENS, description="Максимальное количество токенов в ответе"
+    )
+    top_p: float = Field(DEFAULT_TOP_P, description="Top-p для семплирования")
+    frequency_penalty: float = Field(
+        DEFAULT_FREQUENCY_PENALTY, description="Штраф за повторение частоты"
+    )
+    presence_penalty: float = Field(
+        DEFAULT_PRESENCE_PENALTY, description="Штраф за присутствие"
+    )
 
 
 class OpenAIClient:
@@ -85,7 +99,15 @@ class OpenAIClient:
             api_key: API ключ для OpenAI.
             model: Модель OpenAI для использования (по умолчанию: ChatGPT 4.1 nano).
         """
-        self.config = OpenAIConfig(api_key=SecretStr(api_key), model=model)
+        self.config = OpenAIConfig(
+            api_key=SecretStr(api_key),
+            model=model,
+            temperature=DEFAULT_TEMPERATURE,
+            max_tokens=DEFAULT_MAX_TOKENS,
+            top_p=DEFAULT_TOP_P,
+            frequency_penalty=DEFAULT_FREQUENCY_PENALTY,
+            presence_penalty=DEFAULT_PRESENCE_PENALTY,
+        )
         self.client = openai.OpenAI(api_key=api_key)
         # Внутренний кэш запросов/ответов
         self._cache: Dict[str, Dict[str, Any]] = {}
@@ -128,56 +150,77 @@ class OpenAIClient:
             cache_key: Ключ кэша.
             response: Ответ для кэширования.
         """
-
-        # Вспомогательная функция для извлечения значения из объекта или словаря
-        def _get_value(obj: Any, key: str, default: Any = None) -> Any:
-            if isinstance(obj, dict):
-                return obj.get(key, default)
-            return getattr(obj, key, default)
-
         # Если ответ уже в виде словаря, используем его напрямую
         if isinstance(response, dict):
             self._cache[cache_key] = response
             logger.debug("Ответ сохранен в кэш")
             return
 
-        # Преобразуем ответ-объект в словарь для кэширования
-        cache_data = {
-            "id": _get_value(response, "id"),
-            "object": _get_value(response, "object"),
-            "created": _get_value(response, "created"),
-            "model": _get_value(response, "model"),
-            "choices": [],
-        }
+        try:
+            # Преобразуем ответ-объект в словарь для кэширования
+            if hasattr(response, "model_dump"):
+                # Новый API: используем model_dump() если доступен (pydantic v2)
+                self._cache[cache_key] = response.model_dump()
+                logger.debug("Ответ сохранен в кэш через model_dump")
+                return
+            elif hasattr(response, "dict"):
+                # Pydantic v1 или другие объекты с методом dict()
+                self._cache[cache_key] = response.dict()
+                logger.debug("Ответ сохранен в кэш через dict")
+                return
+            elif hasattr(response, "__dict__"):
+                # Обычные объекты с __dict__
+                self._cache[cache_key] = response.__dict__
+                logger.debug("Ответ сохранен в кэш через __dict__")
+                return
 
-        choices = _get_value(response, "choices", [])
-        for choice in choices:
-            choice_data = {
-                "message": {
-                    "role": _get_value(_get_value(choice, "message"), "role"),
-                    "content": _get_value(_get_value(choice, "message"), "content"),
-                },
-                "finish_reason": _get_value(choice, "finish_reason"),
-                "index": _get_value(choice, "index", 0),
+            # Если ничего не подходит, делаем собственную сериализацию
+            cache_data = {
+                "id": getattr(response, "id", ""),
+                "object": getattr(response, "object", ""),
+                "created": getattr(response, "created", 0),
+                "model": getattr(response, "model", ""),
+                "choices": [],
+                "usage": {},
             }
-            cache_data["choices"].append(choice_data)
 
-        usage = _get_value(response, "usage", {})
-        cache_data["usage"] = {
-            "prompt_tokens": _get_value(usage, "prompt_tokens", 0),
-            "completion_tokens": _get_value(usage, "completion_tokens", 0),
-            "total_tokens": _get_value(usage, "total_tokens", 0),
-        }
+            # Обработка choices
+            choices = getattr(response, "choices", [])
+            for choice in choices:
+                message = getattr(choice, "message", None)
+                choice_data = {
+                    "message": {
+                        "role": getattr(message, "role", "assistant")
+                        if message
+                        else "assistant",
+                        "content": getattr(message, "content", "") if message else "",
+                    },
+                    "finish_reason": getattr(choice, "finish_reason", ""),
+                    "index": getattr(choice, "index", 0),
+                }
+                cache_data["choices"].append(choice_data)
 
-        self._cache[cache_key] = cache_data
-        logger.debug("Ответ сохранен в кэш")
+            # Обработка usage
+            usage = getattr(response, "usage", None)
+            if usage:
+                cache_data["usage"] = {
+                    "prompt_tokens": getattr(usage, "prompt_tokens", 0),
+                    "completion_tokens": getattr(usage, "completion_tokens", 0),
+                    "total_tokens": getattr(usage, "total_tokens", 0),
+                }
+
+            self._cache[cache_key] = cache_data
+            logger.debug("Ответ сохранен в кэш с ручной сериализацией")
+        except Exception as e:
+            logger.error(f"Ошибка при сохранении в кэш: {e}")
+            # В случае ошибки сериализации просто не кэшируем
 
     def chat_completion(
         self,
-        messages: List[Union[Dict[str, str], Message]],
+        messages: Sequence[Union[Dict[str, str], Message]],
         use_cache: bool = True,
         **kwargs,
-    ) -> Dict[str, Any]:
+    ) -> ChatCompletion:
         """Отправляет запрос на создание ответа в чате.
 
         Args:
@@ -194,7 +237,7 @@ class OpenAIClient:
             OpenAIRateLimitError: Если превышен лимит запросов.
         """
         # Нормализуем сообщения в формат словаря
-        normalized_messages = [
+        normalized_messages: List[ChatCompletionMessageParam] = [
             msg.model_dump() if isinstance(msg, Message) else msg for msg in messages
         ]
 
@@ -203,7 +246,7 @@ class OpenAIClient:
             cache_key = self._generate_cache_key(normalized_messages, **kwargs)
             cached_result = self._get_from_cache(cache_key)
             if cached_result:
-                return cached_result
+                return ChatCompletion(**cached_result)
 
         # Параметры для запроса с учетом конфигурации и переданных параметров
         request_params = {
@@ -299,11 +342,23 @@ class OpenAIClient:
         # Отправляем запрос (это не асинхронный вызов, т.к. мы обертываем асинхронный метод)
         response = self.chat_completion(messages, use_cache=use_cache, **kwargs)
         # Извлекаем текст ответа
-        if response and response.get("choices") and len(response["choices"]) > 0:
-            # Явно преобразуем в строку, чтобы соответствовать типу возврата
-            return str(response["choices"][0]["message"]["content"])
-        # Если ответ некорректный, возвращаем сообщение об ошибке
-        return "Не удалось получить ответ от модели."
+        try:
+            # Проверяем, является ли ответ объектом или словарем
+            if hasattr(response, "choices") and len(response.choices) > 0:
+                # Для нового API (объекты)
+                return str(response.choices[0].message.content)
+            elif (
+                isinstance(response, dict)
+                and response.get("choices")
+                and len(response["choices"]) > 0
+            ):
+                # Для старого API (словари)
+                return str(response["choices"][0]["message"]["content"])
+            # Если ответ некорректный, возвращаем сообщение об ошибке
+            return "Не удалось получить ответ от модели."
+        except Exception as e:
+            logger.error(f"Ошибка извлечения ответа: {e}")
+            return "Не удалось получить ответ от модели из-за ошибки обработки."
 
 
 # Создаем декорированную функцию для кэширования в памяти
