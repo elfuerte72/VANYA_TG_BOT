@@ -2,9 +2,11 @@
 Middleware для проверки подписки пользователя на Telegram-канал.
 """
 from aiogram import types
-from aiogram.dispatcher.middlewares import BaseMiddleware
 from aiogram.dispatcher.handler import CancelHandler
+from aiogram.dispatcher.middlewares import BaseMiddleware
+
 from src.config.settings import TELEGRAM_CHANNEL_ID
+
 
 class ChannelSubscriptionMiddleware(BaseMiddleware):
     """
@@ -40,5 +42,5 @@ class ChannelSubscriptionMiddleware(BaseMiddleware):
 
         if chat_member.status not in subscription_statuses:
             # Пользователь не подписан на канал
-            await message.answer(f"⚠️ Для использования бота необходимо подписаться на канал.\n\nПосле подписки нажмите /start для начала диалога.")
+            await message.answer("⚠️ Для использования бота необходимо подписаться на канал.\n\nПосле подписки нажмите /start для начала диалога.")
             raise CancelHandler()

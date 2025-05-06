@@ -6,16 +6,11 @@
 from unittest.mock import MagicMock, patch
 
 import pytest
-from openai import APIConnectionError, RateLimitError
-from openai.types.chat import ChatCompletion, ChatCompletionMessage
-from openai.types.chat.chat_completion import Choice
-from openai.types.completion_usage import CompletionUsage
 
 from src.ai.openai_service import (
     OpenAIClient,
     OpenAIConnectionError,
     OpenAIRateLimitError,
-    OpenAIRequestError,
 )
 
 

@@ -1,7 +1,8 @@
 """
 Reply-клавиатуры для Telegram-бота.
 """
-from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
+from aiogram.types import KeyboardButton, ReplyKeyboardMarkup
+
 
 # Стартовая клавиатура
 def get_start_kb() -> ReplyKeyboardMarkup:

@@ -11,6 +11,8 @@ from src.ai.openai_service import (
     get_cached_completion,
     get_openai_client,
 )
+from src.bot.services.calculation import CalculationService
+from src.bot.services.subscription import SubscriptionService
 
 __all__ = [
     "OpenAIClient",
@@ -19,4 +21,6 @@ __all__ = [
     "OpenAIRequestError",
     "get_openai_client",
     "get_cached_completion",
+    "CalculationService",
+    "SubscriptionService",
 ]

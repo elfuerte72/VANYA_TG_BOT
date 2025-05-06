@@ -42,4 +42,4 @@ To initialize the database, run the following command:
 python -m src.tools.initialize_db
 ```
 
-This will create the database file in the `data` directory and create all tables. 
+This will create the database file in the `data` directory and create all tables.
