@@ -30,7 +30,7 @@ def main():
     # Ensure the directory exists
     os.makedirs(os.path.dirname(args.db_path), exist_ok=True)
 
-    # Create the database engine
+    # Create the database engine with SQLite
     db_url = f"sqlite:///{args.db_path}"
     engine = create_engine(db_url)
 
@@ -41,6 +41,8 @@ def main():
     print("Tables created:")
     for table in Base.metadata.tables:
         print(f"- {table}")
+    print("Поля типа EncryptedString будут автоматически")
+    print("шифроваться в базе данных.")
 
 
 if __name__ == "__main__":

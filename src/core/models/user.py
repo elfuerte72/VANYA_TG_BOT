@@ -4,8 +4,10 @@ User model and related database schema.
 
 from typing import Any
 
-from sqlalchemy import BigInteger, Boolean, Column, DateTime, Float, Integer, String
+from sqlalchemy import BigInteger, Boolean, Column, DateTime, Float, Integer
 from sqlalchemy.ext.declarative import declarative_base
+
+from src.core.utils.encryption import EncryptedString
 
 Base = declarative_base()
 
@@ -20,7 +22,7 @@ class User(Base):
     id: Any = Column(Integer, primary_key=True, autoincrement=True)
     telegram_id: Any = Column(BigInteger, unique=True, nullable=False)
     calculated: Any = Column(Boolean, default=False)
-    gender: Any = Column(String)
+    gender: Any = Column(EncryptedString(10))
     age: Any = Column(Integer)
     height: Any = Column(Integer)
     weight: Any = Column(Float)

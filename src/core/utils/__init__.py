@@ -1,3 +1,3 @@
 """
-Вспомогательные функции для бизнес-логики.
+Utility modules for the core package.
 """

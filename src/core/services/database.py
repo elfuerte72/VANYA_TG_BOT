@@ -31,7 +31,8 @@ class DatabaseService:
         # Ensure directory exists
         os.makedirs(os.path.dirname(db_path), exist_ok=True)
 
-        # Create SQLite database URL
+        # Create database URL
+        # Используем SQLite. Данные будут шифроваться внутри EncryptedString
         self.db_url = f"sqlite:///{db_path}"
         self.engine: Optional[Engine] = None
         self.session_factory = None
