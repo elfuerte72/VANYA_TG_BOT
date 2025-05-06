@@ -16,6 +16,7 @@ from src.bot.services.calculation import CalculationService
 from src.bot.services.subscription import SubscriptionService
 from src.bot.utils.formatters import format_kbju_result, format_user_data_summary
 from src.bot.utils.validators import validate_age, validate_height, validate_weight
+from src.config.settings import ADMIN_USER_IDS
 
 # Initialize router
 router = Router()
@@ -94,7 +95,8 @@ async def start_calculation(
 
     # Check if user has already calculated KBJU
     if await user_repo.user_exists(user_id):
-        if await user_repo.is_calculated(user_id):
+        # Проверяем, рассчитаны ли уже КБЖУ и не является ли пользователь админом
+        if await user_repo.is_calculated(user_id) and user_id not in ADMIN_USER_IDS:
             await safe_edit_message(
                 callback.message,
                 "Вы уже получили расчет КБЖУ. "

@@ -48,6 +48,11 @@ ACTIVITY_MULTIPLIERS = {
     "high": 1.9,  # Высокая активность
 }
 
+# Telegram IDs администраторов/разработчиков, которым разрешен повторный расчет
+ADMIN_USER_IDS = [
+    379336096,  # Telegram ID разработчика
+]
+
 # Создание директорий, если они не существуют
 os.makedirs(DATA_DIR, exist_ok=True)
 os.makedirs(LOGS_DIR, exist_ok=True)
