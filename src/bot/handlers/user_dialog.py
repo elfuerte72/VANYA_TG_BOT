@@ -18,6 +18,7 @@ from src.bot.services.subscription import SubscriptionService
 from src.bot.utils.formatters import format_kbju_result, format_user_data_summary
 from src.bot.utils.validators import validate_age, validate_height, validate_weight
 from src.config.settings import ADMIN_USER_IDS
+from src.core.logger import error_logger, user_logger
 
 # Initialize router
 router = Router()
@@ -41,6 +42,7 @@ async def safe_edit_message(message, text, reply_markup=None, parse_mode=None):
             pass
         else:
             # Если другая ошибка BadRequest, пробуем отправить новое сообщение
+            error_logger.warning(f"Failed to edit message: {e!s}. Sending new message.")
             await message.answer(
                 text=text, reply_markup=reply_markup, parse_mode=parse_mode
             )
@@ -49,13 +51,22 @@ async def safe_edit_message(message, text, reply_markup=None, parse_mode=None):
 # Helper function to check subscription
 async def check_subscription(bot: Bot, user_id: int) -> bool:
     """Check if user is subscribed to the required channel"""
-    return await SubscriptionService.is_subscribed(bot, user_id, REQUIRED_CHANNEL)
+    is_subscribed = await SubscriptionService.is_subscribed(
+        bot, user_id, REQUIRED_CHANNEL
+    )
+    user_logger.info(
+        f"User {user_id} subscription check: {'subscribed' if is_subscribed else 'not subscribed'}"
+    )
+    return is_subscribed
 
 
 # Command handlers
 @router.message(CommandStart())
 async def command_start(message: Message, bot: Bot):
     """Handler for /start command"""
+    user_id = message.from_user.id if message.from_user else "unknown"
+    user_logger.info(f"User {user_id} started the bot")
+
     # Check if user is subscribed to the channel
     if message.from_user and not await check_subscription(bot, message.from_user.id):
         await message.answer(
@@ -83,6 +94,7 @@ async def start_calculation(
         return
 
     user_id = callback.from_user.id
+    user_logger.info(f"User {user_id} started calculation process")
 
     # Check if user is subscribed to the channel
     if not await check_subscription(bot, user_id):
@@ -98,6 +110,9 @@ async def start_calculation(
     if await user_repo.user_exists(user_id):
         # Проверяем, рассчитаны ли уже КБЖУ и не является ли пользователь админом
         if await user_repo.is_calculated(user_id) and user_id not in ADMIN_USER_IDS:
+            user_logger.info(
+                f"User {user_id} tried to recalculate but already has results"
+            )
             await safe_edit_message(
                 callback.message,
                 "Вы уже получили расчет КБЖУ. "
@@ -106,10 +121,12 @@ async def start_calculation(
             return
     else:
         # Create new user if not exists
+        user_logger.info(f"Creating new user: {user_id}")
         await user_repo.create_user(user_id)
 
     # Start the dialog - ask for gender
     await state.set_state(UserForm.await_gender)
+    user_logger.info(f"User {user_id} moved to gender selection")
     await safe_edit_message(
         callback.message, "Укажите ваш пол:", reply_markup=get_gender_keyboard()
     )
@@ -119,17 +136,20 @@ async def start_calculation(
 @router.callback_query(StateFilter(UserForm.await_gender), F.data.startswith("gender:"))
 async def process_gender(callback: CallbackQuery, state: FSMContext):
     """Process gender selection"""
-    if not callback.data:
+    if not callback.data or not callback.from_user:
         return
 
+    user_id = callback.from_user.id
     # Extract gender from callback data
     gender = callback.data.split(":")[1]  # "gender:male" -> "male"
+    user_logger.info(f"User {user_id} selected gender: {gender}")
 
     # Save gender to state
     await state.update_data(gender=gender)
 
     # Move to next state - ask for age
     await state.set_state(UserForm.await_age)
+    user_logger.info(f"User {user_id} moved to age input")
     await safe_edit_message(callback.message, "Укажите ваш возраст (полных лет):")
 
 
@@ -137,22 +157,29 @@ async def process_gender(callback: CallbackQuery, state: FSMContext):
 @router.message(StateFilter(UserForm.await_age))
 async def process_age(message: Message, state: FSMContext):
     """Process age input"""
-    if not message.text:
+    if not message.text or not message.from_user:
         await message.answer("Пожалуйста, введите число.")
         return
 
+    user_id = message.from_user.id
     # Validate age
     is_valid, age_value, error_msg = validate_age(message.text)
 
     if not is_valid and error_msg:
+        user_logger.warning(
+            f"User {user_id} entered invalid age: {message.text}. Error: {error_msg}"
+        )
         await message.answer(error_msg)
         return
+
+    user_logger.info(f"User {user_id} entered age: {age_value}")
 
     # Save age to state
     await state.update_data(age=age_value)
 
     # Move to next state - ask for height
     await state.set_state(UserForm.await_height)
+    user_logger.info(f"User {user_id} moved to height input")
     await message.answer("Укажите ваш рост (в сантиметрах):")
 
 
@@ -160,22 +187,29 @@ async def process_age(message: Message, state: FSMContext):
 @router.message(StateFilter(UserForm.await_height))
 async def process_height(message: Message, state: FSMContext):
     """Process height input"""
-    if not message.text:
+    if not message.text or not message.from_user:
         await message.answer("Пожалуйста, введите число.")
         return
 
+    user_id = message.from_user.id
     # Validate height
     is_valid, height_value, error_msg = validate_height(message.text)
 
     if not is_valid and error_msg:
+        user_logger.warning(
+            f"User {user_id} entered invalid height: {message.text}. Error: {error_msg}"
+        )
         await message.answer(error_msg)
         return
+
+    user_logger.info(f"User {user_id} entered height: {height_value}")
 
     # Save height to state
     await state.update_data(height=height_value)
 
     # Move to next state - ask for weight
     await state.set_state(UserForm.await_weight)
+    user_logger.info(f"User {user_id} moved to weight input")
     await message.answer("Укажите ваш вес (в килограммах):")
 
 
@@ -183,29 +217,31 @@ async def process_height(message: Message, state: FSMContext):
 @router.message(StateFilter(UserForm.await_weight))
 async def process_weight(message: Message, state: FSMContext):
     """Process weight input"""
-    if not message.text:
+    if not message.text or not message.from_user:
         await message.answer("Пожалуйста, введите число.")
         return
 
+    user_id = message.from_user.id
     # Validate weight
     is_valid, weight_value, error_msg = validate_weight(message.text)
 
     if not is_valid and error_msg:
+        user_logger.warning(
+            f"User {user_id} entered invalid weight: {message.text}. Error: {error_msg}"
+        )
         await message.answer(error_msg)
         return
+
+    user_logger.info(f"User {user_id} entered weight: {weight_value}")
 
     # Save weight to state
     await state.update_data(weight=weight_value)
 
     # Move to next state - ask for activity level
     await state.set_state(UserForm.await_activity)
+    user_logger.info(f"User {user_id} moved to activity selection")
     await message.answer(
-        (
-            "Укажите ваш уровень физической активности:\n\n"
-            "Низкий - сидячая работа, минимальная физическая нагрузка\n"
-            "Средний - умеренная активность, легкие тренировки 1-3 раза в неделю\n"
-            "Высокий - интенсивные тренировки 3-5 раз в неделю, физическая работа"
-        ),
+        "Выберите уровень вашей физической активности:",
         reply_markup=get_activity_keyboard(),
     )
 

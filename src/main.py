@@ -1,5 +1,4 @@
 import asyncio
-import logging
 import os
 
 from aiogram import Bot, Dispatcher
@@ -10,14 +9,10 @@ from src.bot.db.connection import get_db_connection
 from src.bot.handlers.user_dialog import router as dialog_router
 from src.bot.middlewares.repository import RepositoryMiddleware
 from src.bot.repository.user_repository import UserRepository
+from src.core.logger import error_logger, main_logger
 
 # Load environment variables
 load_dotenv()
-
-# Configure logging
-log_format = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-logging.basicConfig(level=logging.INFO, format=log_format)
-logger = logging.getLogger(__name__)
 
 
 async def main():
@@ -25,7 +20,7 @@ async def main():
     # Get token from environment variable
     bot_token = os.getenv("BOT_TOKEN")
     if not bot_token:
-        logger.error("No BOT_TOKEN provided in .env file")
+        error_logger.error("No BOT_TOKEN provided in .env file")
         return
 
     # Initialize database connection
@@ -41,7 +36,8 @@ async def main():
     dp = Dispatcher(storage=storage)
 
     # Add middleware to router
-    dialog_router.message.outer_middleware(RepositoryMiddleware(user_repo_factory))
+    repo_middleware = RepositoryMiddleware(user_repo_factory)
+    dialog_router.message.outer_middleware(repo_middleware)
     dialog_router.callback_query.outer_middleware(
         RepositoryMiddleware(user_repo_factory)
     )
@@ -50,7 +46,7 @@ async def main():
     dp.include_router(dialog_router)
 
     # Start polling
-    logger.info("Starting bot")
+    main_logger.info("Starting bot")
     await dp.start_polling(bot)
 
 
@@ -58,6 +54,7 @@ if __name__ == "__main__":
     try:
         asyncio.run(main())
     except (KeyboardInterrupt, SystemExit):
-        logger.info("Bot stopped")
+        main_logger.info("Bot stopped")
     except Exception as e:
-        logger.error(f"Unexpected error: {e}", exc_info=True)
+        error_msg = f"Unexpected error: {e}"
+        error_logger.error(error_msg, exc_info=True)
