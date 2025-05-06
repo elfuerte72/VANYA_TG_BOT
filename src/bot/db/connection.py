@@ -156,7 +156,8 @@ async def _create_tables(db: AsyncDBConnector) -> None:
             height INTEGER,
             weight REAL,
             activity_factor REAL,
-            calculated_at TIMESTAMP
+            calculated_at TIMESTAMP,
+            goal TEXT
         )
     """
     )

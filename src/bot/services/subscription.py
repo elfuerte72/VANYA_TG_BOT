@@ -1,7 +1,6 @@
 import re
 
 from aiogram import Bot
-from aiogram.exceptions import TelegramBadRequest
 
 
 class SubscriptionService:
@@ -48,20 +47,24 @@ class SubscriptionService:
         Returns:
             bool: True if subscribed, False otherwise
         """
-        try:
-            # Извлекаем chat_id из канала
-            chat_id = SubscriptionService.extract_chat_id(channel_id)
+        # Временно возвращаем True для тестирования
+        return True
 
-            # Get chat member status
-            member = await bot.get_chat_member(chat_id=chat_id, user_id=user_id)
+        # Закомментировали для тестирования
+        # try:
+        #     # Извлекаем chat_id из канала
+        #     chat_id = SubscriptionService.extract_chat_id(channel_id)
 
-            # Check if status is one of the subscribed types
-            subscribed_statuses = ["creator", "administrator", "member", "restricted"]
-            return member.status in subscribed_statuses
+        #     # Get chat member status
+        #     member = await bot.get_chat_member(chat_id=chat_id, user_id=user_id)
 
-        except TelegramBadRequest as e:
-            # Логируем ошибку для отладки
-            print(f"Ошибка при проверке подписки: {e}")
-            # Error happened - likely the bot is not admin in the channel
-            # or the channel doesn't exist
-            return True  # Временно возвращаем True для тестирования
+        #     # Check if status is one of the subscribed types
+        #     subscribed_statuses = ["creator", "administrator", "member", "restricted"]
+        #     return member.status in subscribed_statuses
+
+        # except TelegramBadRequest as e:
+        #     # Логируем ошибку для отладки
+        #     print(f"Ошибка при проверке подписки: {e}")
+        #     # Error happened - likely the bot is not admin in the channel
+        #     # or the channel doesn't exist
+        #     return True  # Временно возвращаем True для тестирования

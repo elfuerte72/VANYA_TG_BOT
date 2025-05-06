@@ -10,6 +10,7 @@ class UserForm(StatesGroup):
     await_height = State()
     await_weight = State()
     await_activity = State()
+    await_goal = State()
 
     # Confirmation and final states
     confirmation = State()

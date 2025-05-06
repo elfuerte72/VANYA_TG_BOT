@@ -8,6 +8,7 @@ from src.bot.keyboards.inline_kb import (
     get_activity_keyboard,
     get_confirmation_keyboard,
     get_gender_keyboard,
+    get_goal_keyboard,
     get_start_keyboard,
 )
 from src.bot.models.state import UserForm
@@ -199,7 +200,12 @@ async def process_weight(message: Message, state: FSMContext):
     # Move to next state - ask for activity level
     await state.set_state(UserForm.await_activity)
     await message.answer(
-        "Укажите ваш уровень физической активности:",
+        (
+            "Укажите ваш уровень физической активности:\n\n"
+            "Низкий - сидячая работа, минимальная физическая нагрузка\n"
+            "Средний - умеренная активность, легкие тренировки 1-3 раза в неделю\n"
+            "Высокий - интенсивные тренировки 3-5 раз в неделю, физическая работа"
+        ),
         reply_markup=get_activity_keyboard(),
     )
 
@@ -218,6 +224,28 @@ async def process_activity(callback: CallbackQuery, state: FSMContext):
 
     # Save activity level to state
     await state.update_data(activity=activity)
+
+    # Move to next state - ask for goal
+    await state.set_state(UserForm.await_goal)
+    await safe_edit_message(
+        callback.message,
+        "Какая у вас цель?",
+        reply_markup=get_goal_keyboard(),
+    )
+
+
+# Goal selection handler
+@router.callback_query(StateFilter(UserForm.await_goal), F.data.startswith("goal:"))
+async def process_goal(callback: CallbackQuery, state: FSMContext):
+    """Process goal selection"""
+    if not callback.data:
+        return
+
+    # Extract goal from callback data
+    goal = callback.data.split(":")[1]  # "goal:weightloss" -> "weightloss"
+
+    # Save goal to state
+    await state.update_data(goal=goal)
 
     # Move to confirmation state
     await state.set_state(UserForm.confirmation)
@@ -265,8 +293,20 @@ async def process_edit(callback: CallbackQuery, state: FSMContext):
         await state.set_state(UserForm.await_activity)
         await safe_edit_message(
             callback.message,
-            "Укажите ваш уровень физической активности:",
+            (
+                "Укажите ваш уровень физической активности:\n\n"
+                "Низкий - сидячая работа, минимальная физическая нагрузка\n"
+                "Средний - умеренная активность, легкие тренировки 1-3 раза в неделю\n"
+                "Высокий - интенсивные тренировки 3-5 раз в неделю, физическая работа"
+            ),
             reply_markup=get_activity_keyboard(),
+        )
+    elif field == "goal":
+        await state.set_state(UserForm.await_goal)
+        await safe_edit_message(
+            callback.message,
+            "Какая у вас цель?",
+            reply_markup=get_goal_keyboard(),
         )
 
 
@@ -297,7 +337,11 @@ async def process_confirm(
         "height": user_data.get("height"),
         "weight": user_data.get("weight"),
         "activity_factor": activity_factor,
+        "goal": user_data.get("goal"),
     }
+
+    # Получаем цель пользователя
+    goal = user_data.get("goal", "default")
 
     # Calculate KBJU
     result = CalculationService.calculate_kbju(
@@ -306,6 +350,7 @@ async def process_confirm(
         height=user_data["height"],
         age=user_data["age"],
         activity=user_data["activity"],
+        goal=goal,
     )
 
     # Format result message

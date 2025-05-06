@@ -38,6 +38,22 @@ def get_activity_keyboard() -> InlineKeyboardMarkup:
     return builder.as_markup()
 
 
+def get_goal_keyboard() -> InlineKeyboardMarkup:
+    """Keyboard for goal selection"""
+    builder = InlineKeyboardBuilder()
+
+    builder.add(
+        InlineKeyboardButton(text="Похудение", callback_data="goal:weightloss"),
+        InlineKeyboardButton(
+            text="Набор мышечной массы", callback_data="goal:musclegain"
+        ),
+        InlineKeyboardButton(text="Рекомпозиция", callback_data="goal:recomp"),
+    )
+
+    builder.adjust(1)  # One button per row
+    return builder.as_markup()
+
+
 def get_confirmation_keyboard() -> InlineKeyboardMarkup:
     """Keyboard for confirming user data or returning to edit"""
     builder = InlineKeyboardBuilder()
@@ -54,6 +70,7 @@ def get_confirmation_keyboard() -> InlineKeyboardMarkup:
         InlineKeyboardButton(
             text="🔄 Изменить активность", callback_data="edit:activity"
         ),
+        InlineKeyboardButton(text="🔄 Изменить цель", callback_data="edit:goal"),
     )
 
     # One button per row

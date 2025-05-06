@@ -26,25 +26,6 @@ def format_kbju_result(calculation: Dict) -> str:
         f"<b>🍽️ Рекомендуемое количество приемов пищи:</b> {meal_count}\n\n"
     )
 
-    # Add meal distribution
-    message += "<b>📋 Распределение по приемам пищи:</b>\n\n"
-
-    meals = distribute_meals(calories, protein, fat, carbs, meal_count)
-
-    for i, (name, meal_data) in enumerate(meals, 1):
-        message += (
-            f"<b>{i}. {name}</b>\n"
-            f"Калории: {meal_data['calories']} ккал\n"
-            f"Белки: {meal_data['protein']} г\n"
-            f"Жиры: {meal_data['fat']} г\n"
-            f"Углеводы: {meal_data['carbs']} г\n\n"
-        )
-
-    message += (
-        "<i>Этот расчет основан на формуле Харриса-Бенедикта "
-        "и предназначен для общего ознакомления.</i>"
-    )
-
     return message
 
 
@@ -61,6 +42,13 @@ def format_user_data_summary(data: Dict) -> str:
     # Map activity values to readable text
     activity_map = {"low": "Низкий", "medium": "Средний", "high": "Высокий"}
 
+    # Map goal values to readable text
+    goal_map = {
+        "weightloss": "Похудение",
+        "musclegain": "Набор мышечной массы",
+        "recomp": "Рекомпозиция",
+    }
+
     # Map gender values to readable text
     gender_map = {"male": "Мужской", "female": "Женский"}
 
@@ -69,6 +57,7 @@ def format_user_data_summary(data: Dict) -> str:
     height = data.get("height", "Не указан")
     weight = data.get("weight", "Не указан")
     activity = activity_map.get(data.get("activity", ""), "Не указан")
+    goal = goal_map.get(data.get("goal", ""), "Не указан")
 
     message = (
         f"<b>📋 Проверьте введенные данные:</b>\n\n"
@@ -76,7 +65,8 @@ def format_user_data_summary(data: Dict) -> str:
         f"<b>🔢 Возраст:</b> {age} лет\n"
         f"<b>📏 Рост:</b> {height} см\n"
         f"<b>⚖️ Вес:</b> {weight} кг\n"
-        f"<b>🏃 Уровень активности:</b> {activity}\n\n"
+        f"<b>🏃 Уровень активности:</b> {activity}\n"
+        f"<b>🎯 Цель:</b> {goal}\n\n"
         f"Если все данные верны, нажмите кнопку <b>«Подтвердить»</b>.\n"
         f"Если хотите что-то изменить, воспользуйтесь соответствующими кнопками."
     )

@@ -28,6 +28,7 @@ class User(Base):
     weight: Any = Column(Float)
     activity_factor: Any = Column(Float)
     calculated_at: Any = Column(DateTime)
+    goal: Any = Column(EncryptedString(20))
 
     def __repr__(self) -> str:
         return (
