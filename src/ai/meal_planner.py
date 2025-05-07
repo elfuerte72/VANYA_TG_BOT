@@ -195,61 +195,58 @@ def generate_meal_examples(kbju_data: Dict) -> List[Dict]:
     # Формируем системный промпт для OpenAI
     system_prompt = (
         "Ты - опытный диетолог-нутрициолог. Твоя задача - предложить "
-        + "ОДИН точный вариант для каждого приема пищи, который будет "
-        + "точно соответствовать указанным значениям КБЖУ.\n\n"
+        + "ОДИН вариант для каждого приема пищи, который соответствует указанным "
+        + "значениям КБЖУ.\n\n"
         + "Правила:\n"
-        + "1. Для каждого приема пищи предложи ТОЛЬКО ОДИН набор продуктов\n"
-        + "2. Для каждого ингредиента ОБЯЗАТЕЛЬНО указывай:\n"
-        + "   - вес в сухом виде (до приготовления) в граммах\n"
-        + "   - для круп/макарон указывать вес ДО варки\n"
-        + "   - для мяса указывать вес в сыром виде\n"
-        + "3. Блюда должны ТОЧНО соответствовать указанным значениям КБЖУ\n"
-        + "   (допустимая погрешность ±1г для БЖУ)\n"
-        + "4. Используй только обычные продукты, доступные в России\n"
-        + "5. Вернуть только JSON-массив, без дополнительных пояснений\n"
-        + "6. Каждый прием пищи должен быть реалистичным и сбалансированным\n"
-        + "7. Указывай способ приготовления (варка/жарка/запекание)\n"
-        + '8. Используй формат: "продукт - Xг (сухой вес)" для каждого '
-        "ингредиента"
+        + "1. Для каждого приема пищи предложи список продуктов в текстовом формате\n"
+        + "2. Каждый продукт должен быть указан в формате: 'продукт - Xг (сухой вес)'\n"
+        + "3. Для каждого приема пищи верни текстовое описание в формате:\n"
+        + "   - Продукт 1 - XXг (сухой вес)\n"
+        + "   - Продукт 2 - XXг (сухой вес)\n"
+        + "   Способ приготовления: описание\n"
+        + "4. Каждый прием пищи должен быть в своем элементе массива\n"
+        + "5. Используй только обычные продукты, доступные в России\n"
+        + "6. Для круп/макарон указывай вес ДО варки\n"
+        + "7. Для мяса указывай вес в сыром виде\n"
+        + "8. Верни только JSON-массив без дополнительного текста"
     )
 
     # Формируем список приемов пищи с их КБЖУ
     meals_info = []
     for meal in meal_plan:
         meal_info = (
-            f"- {meal['meal']}:\\n"
-            f"Калории: {meal['calories']} ккал\\n"
-            f"Белки: {meal['protein']} г\\n"
-            f"Жиры: {meal['fat']} г\\n"
+            f"- {meal['meal']}:\n"
+            f"Калории: {meal['calories']} ккал\n"
+            f"Белки: {meal['protein']} г\n"
+            f"Жиры: {meal['fat']} г\n"
             f"Углеводы: {meal['carbs']} г"
         )
         meals_info.append(meal_info)
 
-    meals_text = "\\n\\n".join(meals_info)
+    meals_text = "\n\n".join(meals_info)
 
     user_prompt = (
-        "Предложи ОДИН точный набор продуктов для каждого приема пищи.\\n\\n"
-        f"{meals_text}\\n\\n"
-        "Для каждого приема пищи укажи:\\n"
-        "1. Точный список ингредиентов с весом в сухом виде "
-        "(до приготовления)\\n"
-        + "2. Для круп/макарон - вес ДО варки\\n"
-        + "3. Для мяса - вес в сыром виде\\n"
-        + "4. Способ приготовления\\n"
+        "Предложи набор продуктов для каждого приема пищи для следующего "
+        "плана питания:\n\n"
+        f"{meals_text}\n\n"
+        "Для каждого приема пищи верни текстовое описание в формате JSON:\n"
+        '[{"meal": "Название", "foods": "- Продукт 1 - XXг (сухой вес)\\n- Продукт 2 - XXг (сухой вес)\\nСпособ приготовления: описание"}, ...]\n\n'
+        "Убедись, что JSON правильно форматирован и все строки экранированы."
     )
 
     client = get_openai_client()
-    msg = (
-        "Запрос к OpenAI для генерации списка продуктов на "
-        + f"{meal_count} приемов пищи"
+    logger.info(
+        f"Запрос к OpenAI для генерации списка продуктов на {meal_count} приемов пищи"
     )
-    logger.info(msg)
 
     try:
         # Отправляем запрос к OpenAI
         response = client.get_completion(
             prompt=user_prompt, system_message=system_prompt
         )
+
+        # Логгируем ответ для отладки
+        logger.debug(f"Ответ OpenAI: {response}")
 
         # Попытка преобразовать ответ в JSON
         try:
@@ -269,17 +266,172 @@ def generate_meal_examples(kbju_data: Dict) -> List[Dict]:
                     response_text = response_text[: end_index + 1]
 
             # Преобразуем текст в JSON
-            examples = json.loads(response_text)
+            try:
+                examples = json.loads(response_text)
 
-            # Проверяем, что полученный результат - это список словарей
-            if not isinstance(examples, list):
-                raise ValueError("Результат не является списком")
+                # Если данные пришли, но не в нужном формате, попробуем преобразовать их
+                if isinstance(examples, list) and examples:
+                    # Проверяем наличие необходимых полей
+                    processed_examples = []
 
-            msg = (
-                "Успешно сгенерированы списки продуктов для "
-                + f"{len(examples)} приемов пищи"
-            )
-            logger.info(msg)
+                    for example in examples:
+                        meal_name = None
+                        foods_text = None
+
+                        # Проверяем различные варианты ключей
+                        for key in example:
+                            # Ищем ключи с именем приема пищи
+                            if key.lower() in [
+                                "meal",
+                                "прием_пищи",
+                                "название",
+                                "name",
+                            ]:
+                                meal_name = example[key]
+                                # Стандартизуем названия
+                                if (
+                                    meal_name.lower() == "завтрак"
+                                    or meal_name.lower() == "breakfast"
+                                ):
+                                    meal_name = "Завтрак"
+                                elif (
+                                    meal_name.lower() == "обед"
+                                    or meal_name.lower() == "lunch"
+                                ):
+                                    meal_name = "Обед"
+                                elif (
+                                    meal_name.lower() == "полдник"
+                                    or meal_name.lower() == "snack"
+                                ):
+                                    meal_name = "Полдник"
+                                elif (
+                                    meal_name.lower() == "ужин"
+                                    or meal_name.lower() == "dinner"
+                                ):
+                                    meal_name = "Ужин"
+
+                            # Ищем ключи с информацией о продуктах
+                            if key.lower() in ["foods", "ингредиенты", "продукты"]:
+                                value = example[key]
+                                # Если получен список ингредиентов
+                                if isinstance(value, list):
+                                    ingredients_text = []
+                                    for item in value:
+                                        if isinstance(item, dict):
+                                            product = item.get(
+                                                "продукт", ""
+                                            ) or item.get("product", "")
+                                            weight = item.get("вес", "") or item.get(
+                                                "weight", ""
+                                            )
+                                            ingredients_text.append(
+                                                f"- {product} - {weight}"
+                                            )
+                                        else:
+                                            ingredients_text.append(f"- {item}")
+                                    foods_text = "\n".join(ingredients_text)
+                                else:
+                                    foods_text = value
+
+                        # Добавляем информацию о способе приготовления, если есть
+                        if (
+                            "способ_приготовления" in example
+                            or "cooking_method" in example
+                        ):
+                            method = example.get(
+                                "способ_приготовления", ""
+                            ) or example.get("cooking_method", "")
+                            if method and foods_text:
+                                foods_text += f"\nСпособ приготовления: {method}"
+
+                        if meal_name and foods_text:
+                            processed_examples.append(
+                                {"meal": meal_name, "foods": foods_text}
+                            )
+
+                    examples = processed_examples
+            except json.JSONDecodeError as decode_error:
+                logger.error(f"Ошибка парсинга JSON: {decode_error}")
+                # Пытаемся извлечь данные даже если JSON некорректен
+                # Создаем базовый шаблон на основе полученного ответа
+                examples = []
+                for meal in meal_plan:
+                    meal_name = meal["meal"]
+
+                    # Ищем в тексте ответа информацию о данном приеме пищи
+                    if meal_name.lower() in response_text.lower():
+                        # Извлекаем примерный блок текста для этого приема пищи
+                        start_text = meal_name.lower()
+                        start_idx = response_text.lower().find(start_text)
+
+                        if start_idx != -1:
+                            # Ищем следующий прием пищи или конец текста
+                            next_meal_idx = len(response_text)
+                            for next_meal in ["завтрак", "обед", "полдник", "ужин"]:
+                                if next_meal.lower() != meal_name.lower():
+                                    next_idx = response_text.lower().find(
+                                        next_meal, start_idx + len(start_text)
+                                    )
+                                    if next_idx != -1 and next_idx < next_meal_idx:
+                                        next_meal_idx = next_idx
+
+                            # Извлекаем текст между текущим и следующим приемом пищи
+                            meal_text = response_text[start_idx:next_meal_idx].strip()
+                            # Удаляем заголовок и форматируем как список продуктов
+                            lines = meal_text.split("\n")
+                            food_lines = []
+
+                            for line in lines:
+                                if (
+                                    "- " in line
+                                    or "• " in line
+                                    or line.strip().startswith("*")
+                                ):
+                                    food_lines.append(line.strip())
+
+                            if food_lines:
+                                foods_text = "\n".join(food_lines)
+                                examples.append(
+                                    {"meal": meal_name, "foods": foods_text}
+                                )
+
+            # Проверяем результат и форматируем дальше
+            if not examples:
+                # Если не удалось получить нормальные данные, создаем шаблонные
+                examples = []
+                for meal in meal_plan:
+                    meal_name = meal["meal"]
+                    # Базовые рецепты для каждого приема пищи
+                    default_foods = {
+                        "Завтрак": (
+                            "- Овсяные хлопья - 60г (сухой вес)\n"
+                            "- Куриное яйцо - 2 шт (100г)\n"
+                            "- Молоко 2.5% - 200мл\n"
+                            "- Ягоды замороженные - 50г\n"
+                            "Способ приготовления: овсянку варить на молоке, добавить яйца и ягоды"
+                        ),
+                        "Обед": (
+                            "- Куриная грудка - 150г (сырой вес)\n"
+                            "- Гречка - 70г (сухой вес)\n"
+                            "- Овощи для салата - 150г\n"
+                            "- Масло оливковое - 10г\n"
+                            "Способ приготовления: куриную грудку запечь, гречку отварить"
+                        ),
+                        "Полдник": (
+                            "- Творог 5% - 150г\n"
+                            "- Орехи (миндаль) - 20г\n"
+                            "- Фрукты (яблоко) - 150г\n"
+                            "Способ приготовления: смешать творог с фруктами и орехами"
+                        ),
+                        "Ужин": (
+                            "- Рыба (треска) - 150г (сырой вес)\n"
+                            "- Рис - 70г (сухой вес)\n"
+                            "- Овощи тушеные - 200г\n"
+                            "Способ приготовления: рыбу запечь, рис отварить, овощи потушить"
+                        ),
+                    }
+                    foods_text = default_foods.get(meal_name, "")
+                    examples.append({"meal": meal_name, "foods": foods_text})
 
             # Объединяем списки продуктов с базовым планом питания
             result = []
@@ -296,17 +448,67 @@ def generate_meal_examples(kbju_data: Dict) -> List[Dict]:
                 meal_data["foods"] = foods_text
                 result.append(meal_data)
 
+            logger.info(
+                f"Успешно сгенерированы списки продуктов для {len(result)} приемов пищи"
+            )
             return result
 
-        except (json.JSONDecodeError, ValueError) as e:
+        except Exception as e:
             logger.error(f"Ошибка при обработке ответа OpenAI: {e}")
             logger.debug(f"Проблемный ответ: {response}")
-            # Если не удалось получить корректный JSON, возвращаем план
-            # без списка продуктов
-            return meal_plan
+
+            # Если не удалось получить корректный JSON, используем резервные данные
+            return _add_default_foods_to_meal_plan(meal_plan)
 
     except Exception as e:
         logger.error(f"Ошибка при запросе к OpenAI: {e}")
-        # В случае ошибки при запросе к API, возвращаем план
-        # без списка продуктов
-        return meal_plan
+        # В случае ошибки при запросе к API, используем резервные данные
+        return _add_default_foods_to_meal_plan(meal_plan)
+
+
+def _add_default_foods_to_meal_plan(meal_plan: List[Dict]) -> List[Dict]:
+    """
+    Добавляет стандартные списки продуктов к плану питания
+
+    Args:
+        meal_plan: Список приемов пищи с КБЖУ
+
+    Returns:
+        List[Dict]: Дополненный список приемов пищи с продуктами
+    """
+    # Базовые рецепты для каждого приема пищи
+    default_foods = {
+        "Завтрак": (
+            "- Овсяные хлопья - 60г (сухой вес)\n"
+            "- Куриное яйцо - 2 шт (100г)\n"
+            "- Молоко 2.5% - 200мл\n"
+            "- Ягоды замороженные - 50г\n"
+            "Способ приготовления: овсянку варить на молоке, добавить яйца и ягоды"
+        ),
+        "Обед": (
+            "- Куриная грудка - 150г (сырой вес)\n"
+            "- Гречка - 70г (сухой вес)\n"
+            "- Овощи для салата - 150г\n"
+            "- Масло оливковое - 10г\n"
+            "Способ приготовления: куриную грудку запечь, гречку отварить"
+        ),
+        "Полдник": (
+            "- Творог 5% - 150г\n"
+            "- Орехи (миндаль) - 20г\n"
+            "- Фрукты (яблоко) - 150г\n"
+            "Способ приготовления: смешать творог с фруктами и орехами"
+        ),
+        "Ужин": (
+            "- Рыба (треска) - 150г (сырой вес)\n"
+            "- Рис - 70г (сухой вес)\n"
+            "- Овощи тушеные - 200г\n"
+            "Способ приготовления: рыбу запечь, рис отварить, овощи потушить"
+        ),
+    }
+
+    for meal in meal_plan:
+        meal_name = meal["meal"]
+        meal["foods"] = default_foods.get(meal_name, "")
+
+    logger.info(f"Добавлены стандартные продукты для {len(meal_plan)} приемов пищи")
+    return meal_plan

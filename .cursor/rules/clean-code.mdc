@@ -3,9 +3,74 @@ description:
 globs:
 alwaysApply: false
 ---
+# Clean Code Standards
+description: Основные принципы и практики написания чистого, поддерживаемого кода
+
+autoAttach:
+  - "**/*.py"
+  - "**/*.sql"
+  - "**/*.md"
+  - "**/tests/**/*"
+
+### 📝 Naming Conventions
+- Use intention-revealing names
+- Choose descriptive and unambiguous names
+- Make meaningful distinctions
+- Use pronounceable names
+- Use searchable names
+- Avoid encodings and prefixes
+
+### 📏 Function Rules
+- Small and focused (do one thing)
+- Maximum 20 lines recommended
+- Few arguments (3 or less)
+- No side effects
+- Command Query Separation
+- DRY (Don't Repeat Yourself)
+
+### 📚 Comments
+- Комментарии на русском языке
+- Explain WHY not WHAT
+- Don't comment out code
+- Update comments with code
+- Use as clarification
+- Document public APIs
+
+### 🏗️ Code Structure
+- One concept per class
+- High cohesion
+- Low coupling
+- Follow SOLID principles
+- Keep classes small
+- Proper abstraction levels
+
+### 🧪 Testing
+- One assert per test
+- Fast tests
+- Independent tests
+- Repeatable tests
+- Self-validating
+- Timely written
+
+### 🔄 Error Handling
+- Use exceptions rather than return codes
+- Provide context with exceptions
+- Define exception classes
+- Don't return null
+- Don't pass null
+- Proper error messages in Russian
+
+### 📊 Code Organization
+- Related code stays together
+- Consistent abstraction levels
+- Proper file organization
+- Logical grouping
+- Clear dependencies
+- Minimize nesting
+
 ### 🔄 Project Awareness & Context
 - **Always read `PLANNING.md`** at the start of a new conversation to understand the project's architecture, goals, style, and constraints.
-- **Check `TASK.md`** before starting a new task. If the task isn’t listed, add it with a brief description and today's date.
+- **Check `TASK.md`** before starting a new task. If the task isn't listed, add it with a brief description and today's date.
 - **Use consistent naming conventions, file structure, and architecture patterns** as described in `PLANNING.md`.
 
 ### 🧱 Code Structure & Modularity
@@ -24,7 +89,7 @@ alwaysApply: false
 
 ### ✅ Task Completion
 - **Mark completed tasks in `TASK.md`** immediately after finishing them.
-- Add new sub-tasks or TODOs discovered during development to `TASK.md` under a “Discovered During Work” section.
+- Add new sub-tasks or TODOs discovered during development to `TASK.md` under a "Discovered During Work" section.
 
 ### 📎 Style & Conventions
 - **Use Python** as the primary language.

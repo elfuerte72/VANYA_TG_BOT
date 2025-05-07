@@ -23,7 +23,7 @@ from src.core.logger import error_logger, user_logger
 # Initialize router
 router = Router()
 
-# Configuration - обновлено на правильный ID канала
+# Configuration
 REQUIRED_CHANNEL = "@ivanfit_health"
 
 
@@ -49,13 +49,13 @@ async def safe_edit_message(message, text, reply_markup=None, parse_mode=None):
 
 
 # Helper function to check subscription
-async def check_subscription(bot: Bot, user_id: int) -> bool:
-    """Check if user is subscribed to the required channel"""
+async def check_subscription_status(bot: Bot, user_id: int) -> bool:
+    """Проверяет подписку пользователя на обязательный канал."""
     is_subscribed = await SubscriptionService.is_subscribed(
         bot, user_id, REQUIRED_CHANNEL
     )
     user_logger.info(
-        f"User {user_id} subscription check: "
+        f"User {user_id} subscription to {REQUIRED_CHANNEL}: "
         f"{'subscribed' if is_subscribed else 'not subscribed'}"
     )
     return is_subscribed
@@ -64,62 +64,68 @@ async def check_subscription(bot: Bot, user_id: int) -> bool:
 # Command handlers
 @router.message(CommandStart())
 async def command_start(message: Message, bot: Bot):
-    """Handler for /start command"""
+    """Обработчик команды /start."""
     user_id = message.from_user.id if message.from_user else "unknown"
-    user_logger.info(f"User {user_id} started the bot")
+    user_logger.info(f"User {user_id} started the bot with /start")
 
-    # Check if user is subscribed to the channel
     if message.from_user:
-        is_subscribed = await check_subscription(bot, message.from_user.id)
+        is_subscribed = await check_subscription_status(bot, message.from_user.id)
         if not is_subscribed:
             await message.answer(
-                f"👋 Привет! Для использования бота необходимо подписаться "
-                f"на канал {REQUIRED_CHANNEL}\n\n"
-                "Нажмите кнопку 'Подписаться', затем кнопку проверки.",
+                (
+                    f"👋 Привет! Для использования бота, пожалуйста, подпишитесь "
+                    f"на наш канал: {REQUIRED_CHANNEL}\n\n"
+                    f'После подписки нажмите кнопку "🔄 Я подписался, проверить".'
+                ),
                 reply_markup=get_start_keyboard(
-                    show_calculation=False, show_subscription=True
+                    show_calculation=False, show_subscription_flow=True
                 ),
             )
             return
 
-        # If subscribed, show welcome message
         await message.answer(
-            "🎉 Отлично! Вы подписаны на канал.\n\n"
-            "Добро пожаловать в бот расчета КБЖУ! "
-            "Нажмите кнопку ниже, чтобы начать расчет.",
-            reply_markup=get_start_keyboard(
-                show_calculation=True, show_subscription=False
+            (
+                "🎉 Отлично! Вы уже подписаны на канал.\n\n"
+                "Добро пожаловать в бот для расчёта КБЖУ! "
+                "Нажмите кнопку ниже, чтобы начать."
             ),
+            reply_markup=get_start_keyboard(
+                show_calculation=True, show_subscription_flow=False
+            ),
+        )
+    else:
+        # Случай, если message.from_user отсутствует (теоретически)
+        await message.answer(
+            "Не удалось определить пользователя. Попробуйте перезапустить бота командой /start."
         )
 
 
 # Callback query handlers
 @router.callback_query(F.data == "start_calculation")
-async def start_calculation(
+async def start_calculation_callback(
     callback: CallbackQuery, state: FSMContext, bot: Bot, user_repo: UserRepository
 ):
-    """Handle start calculation button click"""
-    if not callback.from_user:
+    """Обрабатывает нажатие кнопки начала расчета."""
+    if not callback.from_user or not callback.message:
         return
 
     user_id = callback.from_user.id
-    user_logger.info(f"User {user_id} started calculation process")
+    user_logger.info(f"User {user_id} clicked 'start_calculation'")
 
-    # Check if user is subscribed to the channel
-    if not await check_subscription(bot, user_id):
+    if not await check_subscription_status(bot, user_id):
         await safe_edit_message(
             callback.message,
-            f"Для использования бота необходимо подписаться на канал "
-            f"{REQUIRED_CHANNEL}",
+            (
+                f"Пожалуйста, сначала подпишитесь на канал {REQUIRED_CHANNEL}\n\n"
+                f'Затем нажмите кнопку "🔄 Я подписался, проверить".'
+            ),
             reply_markup=get_start_keyboard(
-                show_calculation=False, show_subscription=True
+                show_calculation=False, show_subscription_flow=True
             ),
         )
         return
 
-    # Check if user has already calculated KBJU
     if await user_repo.user_exists(user_id):
-        # Проверяем, рассчитаны ли уже КБЖУ и не является ли пользователь админом
         if await user_repo.is_calculated(user_id) and user_id not in ADMIN_USER_IDS:
             user_logger.info(
                 f"User {user_id} tried to recalculate but already has results"
@@ -127,17 +133,15 @@ async def start_calculation(
             await safe_edit_message(
                 callback.message,
                 "Вы уже получили расчет КБЖУ. "
-                "На данный момент повторный расчет недоступен.",
+                "Повторный расчет на данный момент недоступен.",
             )
             return
     else:
-        # Create new user if not exists
         user_logger.info(f"Creating new user: {user_id}")
         await user_repo.create_user(user_id)
 
-    # Start the dialog - ask for gender
     await state.set_state(UserForm.await_gender)
-    user_logger.info(f"User {user_id} moved to gender selection")
+    user_logger.info(f"User {user_id} moved to UserForm.await_gender")
     await safe_edit_message(
         callback.message, "Укажите ваш пол:", reply_markup=get_gender_keyboard()
     )
@@ -433,30 +437,41 @@ async def process_unknown_message(message: Message):
 
 # Subscription check handler
 @router.callback_query(F.data == "check_subscription")
-async def check_subscription_handler(callback: CallbackQuery, bot: Bot):
-    """Handle subscription check button click"""
-    if not callback.from_user:
+async def check_subscription_callback_handler(callback: CallbackQuery, bot: Bot):
+    """Обрабатывает нажатие кнопки проверки подписки."""
+    if not callback.from_user or not callback.message:
         return
 
     user_id = callback.from_user.id
-    is_subscribed = await check_subscription(bot, user_id)
+    user_logger.info(f"User {user_id} clicked 'check_subscription'")
+    is_subscribed = await check_subscription_status(bot, user_id)
 
     if not is_subscribed:
         await safe_edit_message(
             callback.message,
-            f"❌ Вы еще не подписались на канал {REQUIRED_CHANNEL}\n\n"
-            "Подпишитесь и нажмите кнопку 'Подписаться' для проверки.",
-            reply_markup=get_start_keyboard(
-                show_calculation=False, show_subscription=True
+            (
+                f"❌ Вы все еще не подписаны на канал {REQUIRED_CHANNEL}.\n\n"
+                f"Пожалуйста, сначала подпишитесь, "
+                f"затем нажмите кнопку проверки снова."
             ),
+            reply_markup=get_start_keyboard(
+                show_calculation=False, show_subscription_flow=True
+            ),
+        )
+        await callback.answer(
+            "Подписка не найдена. Попробуйте еще раз после подписки.", show_alert=True
         )
         return
 
-    # If subscribed, show welcome message
     await safe_edit_message(
         callback.message,
-        "🎉 Отлично! Вы подписаны на канал.\n\n"
-        "Добро пожаловать в бот расчета КБЖУ! "
-        "Нажмите кнопку ниже, чтобы начать расчет.",
-        reply_markup=get_start_keyboard(show_calculation=True, show_subscription=False),
+        (
+            "🎉 Отлично! Вы подписаны на канал.\n\n"
+            "Теперь вы можете начать расчет КБЖУ. "
+            "Нажмите кнопку ниже."
+        ),
+        reply_markup=get_start_keyboard(
+            show_calculation=True, show_subscription_flow=False
+        ),
     )
+    await callback.answer("Подписка подтверждена!", show_alert=False)

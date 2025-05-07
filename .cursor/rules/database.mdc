@@ -3,89 +3,58 @@ description:
 globs:
 alwaysApply: false
 ---
----
-description: Database best practices focusing on Prisma and Supabase integration
-globs: prisma/**/*, src/db/**/*, **/*.prisma, supabase/**/*
----
+# Database Standards
+description: Стандарты и лучшие практики работы с базами данных в проекте
 
-# Database Best Practices
+autoAttach:
+  - "**/*.sql"
+  - "**/models/*.py"
+  - "**/schema.prisma"
+  - "**/migrations/*.py"
 
-## Prisma Setup
-- Use proper schema design
-- Implement proper migrations
-- Use proper relation definitions
-- Configure proper connection
-- Implement proper seeding
-- Use proper client setup
+### 🗃️ Database Design
+- Use clear and consistent naming conventions
+- Tables should be named in plural form
+- Primary keys should be named 'id'
+- Foreign keys should follow pattern: `{table_name}_id`
+- Use appropriate data types for columns
+- Add appropriate indexes for frequently queried columns
 
-## Prisma Models
-- Use proper model naming
-- Implement proper relations
-- Use proper field types
-- Define proper indexes
-- Implement proper constraints
-- Use proper enums
+### 🔄 Migrations
+- Every database change must have a migration
+- Migrations must be reversible
+- Test migrations on development before production
+- Document complex migrations in comments
+- Include data migrations when necessary
 
-## Prisma Queries
-- Use proper query optimization
-- Implement proper filtering
-- Use proper relations loading
-- Handle transactions properly
+### 🔒 Security
+- Never store passwords in plain text
+- Use parameterized queries to prevent SQL injection
+- Implement proper access control
+- Encrypt sensitive data
+- Use secure connection strings
+- Regular backup strategy
+
+### 📊 Query Optimization
+- Write efficient queries
+- Use appropriate indexes
+- Avoid N+1 query problems
+- Use eager loading when appropriate
 - Implement proper pagination
-- Use proper aggregations
+- Monitor query performance
 
-## Supabase Setup
-- Configure proper project setup
-- Implement proper authentication
-- Use proper database setup
-- Configure proper storage
-- Implement proper policies
-- Use proper client setup
+### 🏗️ Models
+- Use descriptive model names
+- Include field type annotations
+- Document model relationships
+- Implement proper validation
+- Use appropriate constraints
+- Keep models organized and clean
 
-## Supabase Security
-- Implement proper RLS policies
-- Use proper authentication
-- Configure proper permissions
-- Handle sensitive data properly
-- Implement proper backups
-- Use proper encryption
-
-## Supabase Queries
-- Use proper query optimization
-- Implement proper filtering
-- Use proper joins
-- Handle real-time properly
-- Implement proper pagination
-- Use proper functions
-
-## Database Design
-- Use proper normalization
-- Implement proper indexing
-- Use proper constraints
-- Define proper relations
-- Implement proper cascades
-- Use proper data types
-
-## Performance
-- Use proper connection pooling
-- Implement proper caching
-- Use proper query optimization
-- Handle N+1 queries properly
-- Implement proper batching
-- Monitor performance metrics
-
-## Security
-- Use proper authentication
-- Implement proper authorization
-- Handle sensitive data properly
-- Use proper encryption
-- Implement proper backups
-- Monitor security issues
-
-## Best Practices
-- Follow database conventions
-- Use proper migrations
-- Implement proper versioning
-- Handle errors properly
-- Document schema properly
-- Monitor database health
+### 🔌 Connection Management
+- Use connection pooling
+- Implement proper error handling
+- Close connections properly
+- Monitor connection usage
+- Handle connection timeouts
+- Use appropriate connection settings

@@ -1,35 +1,48 @@
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
+# Имя канала для URL
+REQUIRED_CHANNEL_SIMPLE_NAME = "ivanfit_health"
+
 
 def get_start_keyboard(
-    show_calculation: bool = True, show_subscription: bool = True
+    show_calculation: bool = True, show_subscription_flow: bool = True
 ) -> InlineKeyboardMarkup:
     """
-    Keyboard for the start command with subscription check and calculation buttons
+    Клавиатура для команды /start.
+
+    Кнопки для проверки подписки и начала расчета.
 
     Args:
-        show_calculation: Флаг для отображения кнопки запуска расчета
-        show_subscription: Флаг для отображения кнопки подписки
+        show_calculation: Показывать кнопку запуска расчета.
+        show_subscription_flow: Показывать кнопки для подписки.
 
     Returns:
-        InlineKeyboardMarkup: Клавиатура с кнопками
+        InlineKeyboardMarkup: Клавиатура с кнопками.
     """
     builder = InlineKeyboardBuilder()
 
-    if show_subscription:
-        builder.add(
-            InlineKeyboardButton(text="Подписаться", callback_data="check_subscription")
+    if show_subscription_flow:
+        builder.row(
+            InlineKeyboardButton(
+                text="➡️ Перейти к каналу",
+                url=f"https://t.me/{REQUIRED_CHANNEL_SIMPLE_NAME}",
+            )
+        )
+        builder.row(
+            InlineKeyboardButton(
+                text="🔄 Я подписался, проверить", callback_data="check_subscription"
+            )
         )
 
     if show_calculation:
-        builder.add(
+        builder.row(
             InlineKeyboardButton(
                 text="▶️ Запустить расчёт", callback_data="start_calculation"
             )
         )
 
-    builder.adjust(1)  # One button per row
+    # builder.adjust(1) # Больше не нужен, так как используем builder.row()
     return builder.as_markup()
 
 

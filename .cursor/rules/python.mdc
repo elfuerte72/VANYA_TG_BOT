@@ -3,119 +3,74 @@ description:
 globs:
 alwaysApply: false
 ---
+# Python Coding Standards
+description: Стандарты и лучшие практики написания Python кода для проекта
 
-# Python Best Practices
+autoAttach:
+  - "**/*.py"
+  - "**/*.pyi"
+  - "**/pyproject.toml"
 
-## Project Structure
-- Use src-layout with `src/your_package_name/`
-- Place tests in `tests/` directory parallel to `src/`
-- Keep configuration in `config/` or as environment variables
-- Store requirements in `requirements.txt` or `pyproject.toml`
-- Place static files in `static/` directory
-- Use `templates/` for Jinja2 templates
+### 📝 Code Style
+- Follow PEP 8 guidelines
+- Use type hints for all function parameters and return values
+- Maximum line length: 88 characters (black default)
+- Use snake_case for functions and variables
+- Use PascalCase for classes
+- Use UPPERCASE for constants
 
-## Code Style
-- Follow Black code formatting
-- Use isort for import sorting
-- Follow PEP 8 naming conventions:
-  - snake_case for functions and variables
-  - PascalCase for classes
-  - UPPER_CASE for constants
-- Maximum line length of 88 characters (Black default)
-- Use absolute imports over relative imports
+### 📦 Imports
+- Group imports in the following order:
+  1. Standard library imports
+  2. Third-party imports
+  3. Local application imports
+- Use absolute imports for external packages
+- Use relative imports for local modules
+- No wildcard imports (from module import *)
 
-## Type Hints
-- Use type hints for all function parameters and returns
-- Import types from `typing` module
-- Use `Optional[Type]` instead of `Type | None`
-- Use `TypeVar` for generic types
-- Define custom types in `types.py`
-- Use `Protocol` for duck typing
+### 🏗️ Function Design
+- Functions should do one thing and do it well
+- Maximum function length: 50 lines
+- Use descriptive function names that indicate action
+- Document all functions with Google-style docstrings:
+```python
+def function_name(param1: type, param2: type) -> return_type:
+    """Краткое описание функции.
 
-## Flask Structure
-- Use Flask factory pattern
-- Organize routes using Blueprints
-- Use Flask-SQLAlchemy for database
-- Implement proper error handlers
-- Use Flask-Login for authentication
-- Structure views with proper separation of concerns
+    Args:
+        param1: Описание первого параметра
+        param2: Описание второго параметра
 
-## Database
-- Use SQLAlchemy ORM
-- Implement database migrations with Alembic
-- Use proper connection pooling
-- Define models in separate modules
-- Implement proper relationships
-- Use proper indexing strategies
+    Returns:
+        Описание возвращаемого значения
 
-## Authentication
-- Use Flask-Login for session management
-- Implement Google OAuth using Flask-OAuth
-- Hash passwords with bcrypt
-- Use proper session security
-- Implement CSRF protection
-- Use proper role-based access control
+    Raises:
+        ExceptionType: Описание когда и почему возникает исключение
+    """
+```
 
-## API Design
-- Use Flask-RESTful for REST APIs
-- Implement proper request validation
-- Use proper HTTP status codes
-- Handle errors consistently
-- Use proper response formats
-- Implement proper rate limiting
-
-## Testing
+### 🧪 Testing
+- Write tests for all new functions
 - Use pytest for testing
-- Write tests for all routes
-- Use pytest-cov for coverage
-- Implement proper fixtures
-- Use proper mocking with pytest-mock
-- Test all error scenarios
+- Name test files with prefix `test_`
+- Name test functions with prefix `test_`
+- Use descriptive test names that indicate what is being tested
+- Include positive and negative test cases
 
-## Security
-- Use HTTPS in production
-- Implement proper CORS
-- Sanitize all user inputs
-- Use proper session configuration
-- Implement proper logging
-- Follow OWASP guidelines
+### 🔒 Error Handling
+- Use specific exception types
+- Always include error messages in Russian
+- Log exceptions appropriately
+- Don't catch generic exceptions without re-raising
 
-## Performance
-- Use proper caching with Flask-Caching
-- Implement database query optimization
-- Use proper connection pooling
-- Implement proper pagination
-- Use background tasks for heavy operations
-- Monitor application performance
+### 📚 Comments and Documentation
+- Комментарии на русском языке
+- Документация функций на русском языке
+- Inline comments should explain WHY, not WHAT
+- Keep comments up to date with code changes
 
-## Error Handling
-- Create custom exception classes
-- Use proper try-except blocks
-- Implement proper logging
-- Return proper error responses
-- Handle edge cases properly
-- Use proper error messages
-
-## Documentation
-- Use Google-style docstrings
-- Document all public APIs
-- Keep README.md updated
-- Use proper inline comments
-- Generate API documentation
-- Document environment setup
-
-## Development Workflow
-- Use virtual environments (venv)
-- Implement pre-commit hooks
-- Use proper Git workflow
-- Follow semantic versioning
-- Use proper CI/CD practices
-- Implement proper logging
-
-## Dependencies
-- Pin dependency versions
-- Use requirements.txt for production
-- Separate dev dependencies
-- Use proper package versions
-- Regularly update dependencies
-- Check for security vulnerabilities
+### 🛠️ Tools and Formatting
+- Use black for code formatting
+- Use isort for import sorting
+- Use mypy for type checking
+- Use ruff for linting

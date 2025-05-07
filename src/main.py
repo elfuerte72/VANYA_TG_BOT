@@ -7,6 +7,9 @@ from dotenv import load_dotenv
 
 from src.bot.db.connection import get_db_connection
 from src.bot.handlers.user_dialog import router as dialog_router
+from src.bot.middlewares.channel_subscription import (
+    ChannelSubscriptionMiddleware,
+)
 from src.bot.middlewares.repository import RepositoryMiddleware
 from src.bot.repository.user_repository import UserRepository
 from src.core.logger import error_logger, main_logger
@@ -37,10 +40,15 @@ async def main():
 
     # Add middleware to router
     repo_middleware = RepositoryMiddleware(user_repo_factory)
+    channel_middleware = ChannelSubscriptionMiddleware()
+
+    # Подключаем middleware для проверки подписки
+    dialog_router.message.outer_middleware(channel_middleware)
+    dialog_router.callback_query.outer_middleware(channel_middleware)
+
+    # Подключаем middleware для репозитория
     dialog_router.message.outer_middleware(repo_middleware)
-    dialog_router.callback_query.outer_middleware(
-        RepositoryMiddleware(user_repo_factory)
-    )
+    dialog_router.callback_query.outer_middleware(repo_middleware)
 
     # Register routers
     dp.include_router(dialog_router)
