@@ -24,7 +24,7 @@ from src.core.logger import error_logger, user_logger
 router = Router()
 
 # Configuration - обновлено на правильный ID канала
-REQUIRED_CHANNEL = "https://t.me/+6lrBYf4y9DlmOTQy"
+REQUIRED_CHANNEL = "@ivanfit_health"
 
 
 # Вспомогательная функция для безопасного изменения сообщения
@@ -55,7 +55,8 @@ async def check_subscription(bot: Bot, user_id: int) -> bool:
         bot, user_id, REQUIRED_CHANNEL
     )
     user_logger.info(
-        f"User {user_id} subscription check: {'subscribed' if is_subscribed else 'not subscribed'}"
+        f"User {user_id} subscription check: "
+        f"{'subscribed' if is_subscribed else 'not subscribed'}"
     )
     return is_subscribed
 
@@ -68,20 +69,28 @@ async def command_start(message: Message, bot: Bot):
     user_logger.info(f"User {user_id} started the bot")
 
     # Check if user is subscribed to the channel
-    if message.from_user and not await check_subscription(bot, message.from_user.id):
-        await message.answer(
-            "Для использования бота необходимо подписаться на канал: "
-            f"{REQUIRED_CHANNEL}",
-            reply_markup=get_start_keyboard(),
-        )
-        return
+    if message.from_user:
+        is_subscribed = await check_subscription(bot, message.from_user.id)
+        if not is_subscribed:
+            await message.answer(
+                f"👋 Привет! Для использования бота необходимо подписаться "
+                f"на канал {REQUIRED_CHANNEL}\n\n"
+                "Нажмите кнопку 'Подписаться', затем кнопку проверки.",
+                reply_markup=get_start_keyboard(
+                    show_calculation=False, show_subscription=True
+                ),
+            )
+            return
 
-    # Send welcome message with start button
-    await message.answer(
-        "Добро пожаловать в бот расчета КБЖУ! "
-        "Нажмите кнопку ниже, чтобы начать расчет.",
-        reply_markup=get_start_keyboard(),
-    )
+        # If subscribed, show welcome message
+        await message.answer(
+            "🎉 Отлично! Вы подписаны на канал.\n\n"
+            "Добро пожаловать в бот расчета КБЖУ! "
+            "Нажмите кнопку ниже, чтобы начать расчет.",
+            reply_markup=get_start_keyboard(
+                show_calculation=True, show_subscription=False
+            ),
+        )
 
 
 # Callback query handlers
@@ -100,9 +109,11 @@ async def start_calculation(
     if not await check_subscription(bot, user_id):
         await safe_edit_message(
             callback.message,
-            "Для использования бота необходимо подписаться на канал: "
+            f"Для использования бота необходимо подписаться на канал "
             f"{REQUIRED_CHANNEL}",
-            reply_markup=get_start_keyboard(),
+            reply_markup=get_start_keyboard(
+                show_calculation=False, show_subscription=True
+            ),
         )
         return
 
@@ -241,7 +252,10 @@ async def process_weight(message: Message, state: FSMContext):
     await state.set_state(UserForm.await_activity)
     user_logger.info(f"User {user_id} moved to activity selection")
     await message.answer(
-        "Выберите уровень вашей физической активности:",
+        "Выберите уровень вашей физической активности:\n\n"
+        "• Низкий — если вы работаете за компьютером, почти не ходите пешком и не занимаетесь спортом.\n"
+        "• Средний — если вы ходите пешком хотя бы 30–60 минут в день или делаете лёгкие тренировки 1–3 раза в неделю.\n"
+        "• Высокий — если вы занимаетесь спортом 3–5 раз в неделю или у вас физическая работа.",
         reply_markup=get_activity_keyboard(),
     )
 
@@ -286,13 +300,17 @@ async def process_goal(callback: CallbackQuery, state: FSMContext):
     # Move to confirmation state
     await state.set_state(UserForm.confirmation)
 
-    # Get all collected data
+    # Show confirmation keyboard with user data summary
     user_data = await state.get_data()
-
-    # Format data for confirmation message
-    message_text = format_user_data_summary(user_data)
-
-    # Send confirmation message with keyboard for editing
+    message_text = (
+        format_user_data_summary(user_data)
+        .replace(
+            "Если все данные верны, нажмите кнопку «Подтвердить».\n"
+            "Если хотите что-то изменить, воспользуйтесь соответствующими кнопками.",
+            "",
+        )
+        .strip()
+    )
     await safe_edit_message(
         callback.message,
         message_text,
@@ -329,12 +347,9 @@ async def process_edit(callback: CallbackQuery, state: FSMContext):
         await state.set_state(UserForm.await_activity)
         await safe_edit_message(
             callback.message,
-            (
-                "Укажите ваш уровень физической активности:\n\n"
-                "Низкий - сидячая работа, минимальная физическая нагрузка\n"
-                "Средний - умеренная активность, легкие тренировки 1-3 раза в неделю\n"
-                "Высокий - интенсивные тренировки 3-5 раз в неделю, физическая работа"
-            ),
+            "Выберите уровень вашей физической активности:\n\n"
+            "(Если весь день сидите — выбирайте низкий. "
+            "Если двигаетесь или тренируетесь — выбирайте средний или высокий.)",
             reply_markup=get_activity_keyboard(),
         )
     elif field == "goal":
@@ -413,4 +428,35 @@ async def process_unknown_message(message: Message):
     """Handle any messages during active dialog that don't match other handlers"""
     await message.answer(
         "Пожалуйста, следуйте инструкциям или используйте кнопки для ответа."
+    )
+
+
+# Subscription check handler
+@router.callback_query(F.data == "check_subscription")
+async def check_subscription_handler(callback: CallbackQuery, bot: Bot):
+    """Handle subscription check button click"""
+    if not callback.from_user:
+        return
+
+    user_id = callback.from_user.id
+    is_subscribed = await check_subscription(bot, user_id)
+
+    if not is_subscribed:
+        await safe_edit_message(
+            callback.message,
+            f"❌ Вы еще не подписались на канал {REQUIRED_CHANNEL}\n\n"
+            "Подпишитесь и нажмите кнопку 'Подписаться' для проверки.",
+            reply_markup=get_start_keyboard(
+                show_calculation=False, show_subscription=True
+            ),
+        )
+        return
+
+    # If subscribed, show welcome message
+    await safe_edit_message(
+        callback.message,
+        "🎉 Отлично! Вы подписаны на канал.\n\n"
+        "Добро пожаловать в бот расчета КБЖУ! "
+        "Нажмите кнопку ниже, чтобы начать расчет.",
+        reply_markup=get_start_keyboard(show_calculation=True, show_subscription=False),
     )

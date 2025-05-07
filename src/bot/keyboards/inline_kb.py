@@ -2,14 +2,34 @@ from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 
-def get_start_keyboard() -> InlineKeyboardMarkup:
-    """Keyboard for the start command with a button to launch calculation"""
+def get_start_keyboard(
+    show_calculation: bool = True, show_subscription: bool = True
+) -> InlineKeyboardMarkup:
+    """
+    Keyboard for the start command with subscription check and calculation buttons
+
+    Args:
+        show_calculation: Флаг для отображения кнопки запуска расчета
+        show_subscription: Флаг для отображения кнопки подписки
+
+    Returns:
+        InlineKeyboardMarkup: Клавиатура с кнопками
+    """
     builder = InlineKeyboardBuilder()
-    builder.add(
-        InlineKeyboardButton(
-            text="▶️ Запустить расчёт", callback_data="start_calculation"
+
+    if show_subscription:
+        builder.add(
+            InlineKeyboardButton(text="Подписаться", callback_data="check_subscription")
         )
-    )
+
+    if show_calculation:
+        builder.add(
+            InlineKeyboardButton(
+                text="▶️ Запустить расчёт", callback_data="start_calculation"
+            )
+        )
+
+    builder.adjust(1)  # One button per row
     return builder.as_markup()
 
 
@@ -55,24 +75,11 @@ def get_goal_keyboard() -> InlineKeyboardMarkup:
 
 
 def get_confirmation_keyboard() -> InlineKeyboardMarkup:
-    """Keyboard for confirming user data or returning to edit"""
+    """Keyboard for confirming user data"""
     builder = InlineKeyboardBuilder()
 
-    # Confirm button
+    # Only confirm button
     builder.add(InlineKeyboardButton(text="✅ Подтвердить", callback_data="confirm"))
 
-    # Edit buttons
-    builder.add(
-        InlineKeyboardButton(text="🔄 Изменить пол", callback_data="edit:gender"),
-        InlineKeyboardButton(text="🔄 Изменить возраст", callback_data="edit:age"),
-        InlineKeyboardButton(text="🔄 Изменить рост", callback_data="edit:height"),
-        InlineKeyboardButton(text="🔄 Изменить вес", callback_data="edit:weight"),
-        InlineKeyboardButton(
-            text="🔄 Изменить активность", callback_data="edit:activity"
-        ),
-        InlineKeyboardButton(text="🔄 Изменить цель", callback_data="edit:goal"),
-    )
-
-    # One button per row
-    builder.adjust(1)
+    builder.adjust(1)  # One button per row
     return builder.as_markup()
