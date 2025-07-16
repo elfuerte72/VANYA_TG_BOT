@@ -1,0 +1,57 @@
+version: '3.8'
+
+services:
+  vanya_tg_bot:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: vanya_tg_bot_prod
+    restart: always
+    environment:
+      - BOT_TOKEN=${BOT_TOKEN}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - TELEGRAM_CHANNEL_ID=${TELEGRAM_CHANNEL_ID}
+      - DATABASE_SECRET_KEY=${DATABASE_SECRET_KEY}
+      - LOG_LEVEL=${LOG_LEVEL:-WARNING}
+      - DB_PATH=/app/data/users.db
+    volumes:
+      # Используем именованные volume для продакшена
+      - bot_data_prod:/app/data
+      - bot_logs_prod:/app/logs
+    networks:
+      - vanya_bot_network_prod
+    deploy:
+      restart_policy:
+        condition: any
+        delay: 10s
+        max_attempts: 5
+        window: 300s
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+        reservations:
+          cpus: '0.1'
+          memory: 128M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "5"
+    # Проверка здоровья для продакшена
+    healthcheck:
+      test: ["CMD", "python", "-c", "import sys; sys.exit(0)"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+networks:
+  vanya_bot_network_prod:
+    driver: bridge
+
+volumes:
+  bot_data_prod:
+    driver: local
+  bot_logs_prod:
+    driver: local

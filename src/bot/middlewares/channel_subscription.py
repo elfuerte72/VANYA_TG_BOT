@@ -85,14 +85,14 @@ class ChannelSubscriptionMiddleware(BaseMiddleware):
                     await event.answer(
                         message_text,
                         reply_markup=get_start_keyboard(
-                            show_calculation=False, show_subscription=True
+                            show_calculation=False, show_subscription_flow=True
                         ),
                     )
                 elif isinstance(event, CallbackQuery) and event.message:
                     await event.message.answer(
                         message_text,
                         reply_markup=get_start_keyboard(
-                            show_calculation=False, show_subscription=True
+                            show_calculation=False, show_subscription_flow=True
                         ),
                     )
                     await event.answer()

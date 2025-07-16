@@ -1,0 +1,48 @@
+# Используем официальный Python образ с Alpine Linux для минимального размера
+FROM python:3.11-slim
+
+# Устанавливаем рабочую директорию
+WORKDIR /app
+
+# Устанавливаем системные зависимости для SQLCipher и cryptography
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    libssl-dev \
+    libffi-dev \
+    libsqlite3-dev \
+    pkg-config \
+    && rm -rf /var/lib/apt/lists/*
+
+# Копируем файлы зависимостей
+COPY requirements.txt .
+
+# Устанавливаем Python зависимости
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir -r requirements.txt
+
+# Копируем исходный код
+COPY src/ ./src/
+COPY run.py .
+COPY healthcheck.py .
+
+# Создаем директории для данных и логов
+RUN mkdir -p /app/data /app/logs
+
+# Создаем пользователя для безопасности
+RUN useradd --create-home --shell /bin/bash app && \
+    chown -R app:app /app
+USER app
+
+# Устанавливаем переменные окружения
+ENV PYTHONPATH=/app
+ENV PYTHONUNBUFFERED=1
+
+# Открываем порт (если понадобится для веб-интерфейса в будущем)
+EXPOSE 8000
+
+# Проверка здоровья контейнера
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD python healthcheck.py
+
+# Команда запуска
+CMD ["python", "run.py"]

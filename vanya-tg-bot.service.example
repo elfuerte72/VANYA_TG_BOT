@@ -1,0 +1,33 @@
+[Unit]
+Description=Vanya Telegram Bot
+Documentation=https://github.com/your_username/vanya_tg_bot
+Requires=docker.service
+After=docker.service
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+User=root
+Group=docker
+
+# Измените путь на актуальный
+WorkingDirectory=/opt/vanya_tg_bot
+
+# Команды для запуска и остановки
+ExecStartPre=/usr/local/bin/docker-compose -f docker-compose.prod.yml pull
+ExecStart=/usr/local/bin/docker-compose -f docker-compose.prod.yml up -d
+ExecStop=/usr/local/bin/docker-compose -f docker-compose.prod.yml down
+ExecStopPost=/bin/sleep 10
+
+# Таймауты
+TimeoutStartSec=300
+TimeoutStopSec=30
+
+# Политики перезапуска
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

@@ -1,7 +1,5 @@
 ---
-description:
-globs:
-alwaysApply: false
+alwaysApply: true
 ---
 # Python Coding Standards
 description: Стандарты и лучшие практики написания Python кода для проекта

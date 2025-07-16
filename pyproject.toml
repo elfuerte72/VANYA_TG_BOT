@@ -15,8 +15,8 @@ sqlalchemy = "^2.0.23"
 sqlmodel = "^0.0.14"
 pydantic = "^2.6.0"
 loguru = "^0.7.2"
-pysqlcipher3 = "^1.2.0"
-cryptography = "^42.0.0"
+# pysqlcipher3 = "^1.2.0"  # Временно отключено для локального тестирования
+# cryptography = "^42.0.0" # Временно отключено для локального тестирования
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^7.4.0"

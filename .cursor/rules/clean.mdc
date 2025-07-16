@@ -1,7 +1,5 @@
 ---
-description:
-globs:
-alwaysApply: false
+alwaysApply: true
 ---
 # Clean Code Standards
 description: Основные принципы и практики написания чистого, поддерживаемого кода

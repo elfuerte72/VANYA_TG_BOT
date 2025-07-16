@@ -1,0 +1,53 @@
+# Альтернативный Dockerfile с Poetry
+FROM python:3.11-slim
+
+# Устанавливаем рабочую директорию
+WORKDIR /app
+
+# Устанавливаем системные зависимости
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    libssl-dev \
+    libffi-dev \
+    libsqlite3-dev \
+    pkg-config \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Устанавливаем Poetry
+RUN pip install poetry
+
+# Настройка Poetry
+ENV POETRY_NO_INTERACTION=1 \
+    POETRY_VENV_IN_PROJECT=1 \
+    POETRY_CACHE_DIR=/tmp/poetry_cache
+
+# Копируем файлы Poetry
+COPY pyproject.toml poetry.lock* ./
+
+# Устанавливаем зависимости
+RUN poetry install --only=main && rm -rf $POETRY_CACHE_DIR
+
+# Копируем исходный код
+COPY src/ ./src/
+COPY run.py .
+COPY healthcheck.py .
+
+# Создаем директории для данных и логов
+RUN mkdir -p /app/data /app/logs
+
+# Создаем пользователя для безопасности
+RUN useradd --create-home --shell /bin/bash app && \
+    chown -R app:app /app
+USER app
+
+# Устанавливаем переменные окружения
+ENV PYTHONPATH=/app
+ENV PYTHONUNBUFFERED=1
+
+# Проверка здоровья контейнера
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD poetry run python healthcheck.py
+
+# Команда запуска
+CMD ["poetry", "run", "python", "run.py"]

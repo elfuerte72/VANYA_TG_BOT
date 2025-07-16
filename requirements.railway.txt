@@ -1,0 +1,10 @@
+# Requirements for Railway deployment (without SQLCipher)
+aiogram==3.3.0
+openai==1.12.0
+python-dotenv==1.0.0
+sqlalchemy==2.0.23
+sqlmodel==0.0.14
+pydantic>=2.4.1,<2.6
+loguru==0.7.2
+# Removed pysqlcipher3 for Railway deployment
+# Removed cryptography for Railway deployment (not needed without SQLCipher)
